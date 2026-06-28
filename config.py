@@ -24,7 +24,9 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-secret-key')
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', str(BASE_DIR / 'screens'))
     DB_PATH = os.getenv('DB_PATH', str(BASE_DIR / 'monitor.db'))
-    KEEP_MINUTES = int(os.getenv('KEEP_MINUTES', '10'))
+    KEEP_MINUTES = int(os.getenv('KEEP_MINUTES', '5'))
+    GALLERY_KEEP_MINUTES = int(os.getenv('GALLERY_KEEP_MINUTES', str(KEEP_MINUTES)))
+    MAX_RAM_SHOTS_PER_AGENT = int(os.getenv('MAX_RAM_SHOTS_PER_AGENT', '60'))
     UPLOAD_TOKEN = os.getenv('UPLOAD_TOKEN', '')
 
     SESSION_COOKIE_HTTPONLY = True

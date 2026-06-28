@@ -21,7 +21,7 @@
     </div>
   </section>
   <div class="section-title"><span id="agent-count">{{ agents|length }}</span> agent göstərilir</div>
-  <div class="empty-state hidden" id="empty-state">Agent yoxdur</div>
+  <div id="emptyState" class="empty-state" hidden></div>
   <div class="grid" id="agent-grid">
     {% for a in agents %}
     <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}">
@@ -44,15 +44,34 @@
   </div>
 </main>
 <script>
-const filterButtons=Array.from(document.querySelectorAll('.stat-item[data-filter]'));
-const cards=Array.from(document.querySelectorAll('.agent-card'));
-const countEl=document.getElementById('agent-count');
-const emptyEl=document.getElementById('empty-state');
-const emptyMessages={all:'Agent yoxdur',online:'Online istifadəçi yoxdur',offline:'Offline istifadəçi yoxdur'};
-filterButtons.forEach(btn=>btn.addEventListener('click',()=>{const filter=btn.dataset.filter;filterButtons.forEach(b=>b.classList.toggle('active',b===btn));let visible=0;cards.forEach(card=>{const show=filter==='all'||card.dataset.status===filter;card.hidden=!show;if(show)visible++;});countEl.textContent=visible;emptyEl.textContent=emptyMessages[filter]||'Agent yoxdur';emptyEl.classList.toggle('hidden',visible!==0);}));
-const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
-async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}
-setInterval(()=>liveThumbs.forEach(refreshLiveThumb),1000);
+document.addEventListener('DOMContentLoaded',()=>{
+  const filterButtons=Array.from(document.querySelectorAll('.stat-item[data-filter]'));
+  const cards=Array.from(document.querySelectorAll('.agent-card'));
+  const countEl=document.getElementById('agent-count');
+  const emptyEl=document.getElementById('emptyState');
+  const emptyMessages={all:'Agent yoxdur',online:'Online istifadəçi yoxdur',offline:'Offline istifadəçi yoxdur'};
+
+  function applyFilter(filter, activeButton){
+    let visible=0;
+    cards.forEach(card=>{
+      const show=filter==='all'||card.dataset.status===filter;
+      card.style.display=show?'':'none';
+      if(show)visible++;
+    });
+    filterButtons.forEach(btn=>btn.classList.toggle('active',btn===activeButton));
+    if(countEl)countEl.textContent=visible;
+    if(emptyEl){
+      emptyEl.textContent=emptyMessages[filter]||emptyMessages.all;
+      emptyEl.hidden=visible!==0;
+    }
+  }
+
+  filterButtons.forEach(btn=>btn.addEventListener('click',()=>applyFilter(btn.dataset.filter||'all',btn)));
+
+  const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
+  async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}
+  setInterval(()=>liveThumbs.forEach(refreshLiveThumb),1000);
+});
 </script>
 </body>
 </html>
