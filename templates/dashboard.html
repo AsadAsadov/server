@@ -1,1 +1,55 @@
-<!doctype html><html><head><meta charset="utf-8"><title>BestHome Monitor - Dashboard</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head><body><header><div class="brand"><div class="badge">BH</div><div><div style="font-size:14px;font-weight:600;">BestHome Monitor</div><div class="subtitle">İşçi komputerlərinin canlı izlənməsi</div></div></div><a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıxış</a></header><main><div class="stats-box"><div class="stat-item">Ümumi: <b>{{ agents|length }}</b></div><div class="stat-item stat-online">Online: <b>{{ agents|selectattr('online')|list|length }}</b></div><div class="stat-item stat-offline">Offline: <b>{{ agents|rejectattr('online')|list|length }}</b></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-size:14px;font-weight:500;">Agentlər ({{ agents|length }})</div><a href="{{ url_for('main.employees') }}" class="btn-secondary">👥 İşçi paneli</a></div><div class="grid">{% for a in agents %}<div class="card"><div class="card-header"><div><div class="name">{% if a.full_name %}{{ a.full_name }}{% else %}{{ a.name }}{% endif %}</div><div class="emp-line">PC: {{ a.name }}{% if a.department %} • {{ a.department }}{% endif %}{% if a.role %} • {{ a.role }}{% endif %}</div></div>{% if a.online %}<div class="status online"><span style="width:8px;height:8px;border-radius:999px;background:#4ade80;"></span>ONLINE</div>{% else %}<div class="status offline"><span style="width:8px;height:8px;border-radius:999px;background:#f97373;"></span>OFFLINE</div>{% endif %}</div><div class="card-body"><div class="meta">Son aktivlik: {{ a.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}</div><div class="small">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}</div>{% if a.online %}<img src="/screens/{{ a.name }}_last.jpg?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}">{% endif %}<a href="{{ url_for('main.agent_detail', agent_name=a.name) }}" class="view-link">🔍 Agent səhifəsi</a></div></div>{% endfor %}</div></main><script>const liveThumbs=Array.from(document.querySelectorAll(".live-thumb[data-live-agent]"));async function refreshLiveThumb(img){const agentName=img.dataset.liveAgent;if(!agentName)return;try{const resp=await fetch("/api/agent/"+encodeURIComponent(agentName)+"/last");if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src="/screens/"+data.filename+"?t="+Date.now();}catch(e){console.warn("Dashboard live screenshot refresh failed",e);}}function refreshLive(){liveThumbs.forEach(refreshLiveThumb);}setInterval(refreshLive,1000);</script></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>BestHome Monitor - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="app-header">
+  <div class="brand"><div class="badge">BH</div><div><div class="brand-title">BestHome Monitor</div><div class="subtitle">İşçi komputerlərinin canlı izlənməsi</div></div></div>
+  <div class="header-actions"><a href="{{ url_for('main.employees') }}" class="btn-secondary">👥 İşçi paneli</a><a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıxış</a></div>
+</header>
+<main>
+  <section class="hero-panel">
+    <div><p class="eyebrow">Monitor paneli</p><h1>Agentlər</h1><p class="subtitle">Online/offline status, son aktivlik və canlı görüntülər</p></div>
+    <div class="stats-box" role="group" aria-label="Agent filterləri">
+      <button class="stat-item active" type="button" data-filter="all">Ümumi <b>{{ agents|length }}</b></button>
+      <button class="stat-item stat-online" type="button" data-filter="online">Online <b>{{ agents|selectattr('online')|list|length }}</b></button>
+      <button class="stat-item stat-offline" type="button" data-filter="offline">Offline <b>{{ agents|rejectattr('online')|list|length }}</b></button>
+    </div>
+  </section>
+  <div class="section-title"><span id="agent-count">{{ agents|length }}</span> agent göstərilir</div>
+  <div class="grid" id="agent-grid">
+    {% for a in agents %}
+    <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}">
+      <div class="card-header">
+        <div><div class="name">{{ a.name }}</div>{% if a.full_name %}<div class="emp-line">İşçi: {{ a.full_name }}</div>{% endif %}<div class="emp-line">{% if a.department %}{{ a.department }}{% endif %}{% if a.role %}{% if a.department %} • {% endif %}{{ a.role }}{% endif %}</div></div>
+        <div class="status {{ 'online' if a.online else 'offline' }}"><span></span>{{ 'ONLINE' if a.online else 'OFFLINE' }}</div>
+      </div>
+      <div class="card-body">
+        <div class="meta-row"><span>Son aktivlik</span><b>{{ a.last_seen_display }}</b></div>
+        <div class="small info-box">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}</div>
+        <div class="thumb-wrap {{ 'is-offline' if not a.online else '' }}">
+          {% if a.last_filename %}<img src="/screens/{{ a.last_filename }}?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}" alt="{{ a.name }} screenshot" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden')">{% endif %}
+          <div class="thumb-placeholder {{ '' if not a.last_filename else 'hidden' }}">Görüntü yoxdur</div>
+          {% if not a.online %}<div class="offline-watermark">OFFLINE</div>{% endif %}
+        </div>
+        <a href="{{ url_for('main.agent_detail', agent_name=a.name) }}" class="view-link">🔍 Agent səhifəsi</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</main>
+<script>
+const filterButtons=Array.from(document.querySelectorAll('.stat-item[data-filter]'));
+const cards=Array.from(document.querySelectorAll('.agent-card'));
+const countEl=document.getElementById('agent-count');
+filterButtons.forEach(btn=>btn.addEventListener('click',()=>{const filter=btn.dataset.filter;filterButtons.forEach(b=>b.classList.toggle('active',b===btn));let visible=0;cards.forEach(card=>{const show=filter==='all'||card.dataset.status===filter;card.hidden=!show;if(show)visible++;});countEl.textContent=visible;}));
+const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
+async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}
+setInterval(()=>liveThumbs.forEach(refreshLiveThumb),1000);
+</script>
+</body>
+</html>

@@ -1,8 +1,7 @@
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
-from flask import Blueprint, current_app, request, send_from_directory
+from flask import Blueprint, Response, current_app, request
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
@@ -11,6 +10,7 @@ from utils.security import check_upload_token, safe_pc_name, safe_screen_filenam
 upload_bp = Blueprint('upload', __name__)
 logger = logging.getLogger(__name__)
 _LAST_CLEANUP = 0
+SCREENSHOT_STORE: dict[str, bytes] = {}
 
 
 @upload_bp.route('/upload', methods=['POST'])
@@ -29,19 +29,12 @@ def upload():
 
     now = datetime.utcnow()
     timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
-    upload_dir = Path(current_app.config['UPLOAD_FOLDER'])
-    upload_dir.mkdir(parents=True, exist_ok=True)
     filename = safe_screen_filename(f'{pc_name}_{timestamp}.jpg')
-    full_path = upload_dir / filename
-    last_image = upload_dir / safe_screen_filename(f'{pc_name}_last.jpg')
+    last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
-    try:
-        data = file.read()
-        full_path.write_bytes(data)
-        last_image.write_bytes(data)
-    except OSError:
-        logger.exception('Failed writing upload for pc=%s', pc_name)
-        return 'File write error', 500
+    data = file.read()
+    SCREENSHOT_STORE[filename] = data
+    SCREENSHOT_STORE[last_filename] = data
 
     conn = get_db()
     try:
@@ -62,7 +55,7 @@ def upload():
 
     now_ts = time.time()
     if now_ts - _LAST_CLEANUP >= 600:
-        cleanup_server_screens(current_app.config['UPLOAD_FOLDER'], current_app.config['KEEP_MINUTES'])
+        cleanup_server_screens(current_app.config['KEEP_MINUTES'], SCREENSHOT_STORE)
         _LAST_CLEANUP = now_ts
     return 'OK', 200
 
@@ -70,4 +63,8 @@ def upload():
 @upload_bp.route('/screens/<path:filename>')
 @login_required
 def screens(filename):
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], safe_screen_filename(filename))
+    safe_name = safe_screen_filename(filename)
+    data = SCREENSHOT_STORE.get(safe_name)
+    if data is None:
+        return 'Screenshot not found in RAM', 404
+    return Response(data, mimetype='image/jpeg', headers={'Cache-Control': 'no-store, max-age=0'})
