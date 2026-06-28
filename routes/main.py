@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 from flask import Blueprint, redirect, render_template, request, url_for
 from auth import login_required
 from database import get_db
@@ -6,6 +7,13 @@ from utils.security import csrf_protect, safe_pc_name
 from utils.timezone import format_baku_time
 
 main_bp = Blueprint('main', __name__)
+
+
+def _url_domain(active_url):
+    if not active_url:
+        return ''
+    parsed = urlparse(active_url if '://' in active_url else f'https://{active_url}')
+    return parsed.netloc or parsed.path.split('/')[0]
 
 
 @main_bp.route('/')
@@ -43,6 +51,8 @@ def dashboard():
             'role': emp['role'] if emp else None,
             'active_window': a['active_window'],
             'active_process': a['active_process'],
+            'active_url': a['active_url'],
+            'active_url_domain': _url_domain(a['active_url']),
             'last_filename': last_shot['filename'] if last_shot else None,
         })
     conn.close()
@@ -122,6 +132,7 @@ def agent_detail(agent_name):
         is_online=is_online,
         active_window=a['active_window'],
         active_process=a['active_process'],
+        active_url=a['active_url'],
     )
 
 
