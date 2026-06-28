@@ -2,11 +2,11 @@ import logging
 import time
 from datetime import datetime
 from io import BytesIO
-from flask import Blueprint, current_app, request, send_file
+from flask import Blueprint, Response, current_app, request, send_file, stream_with_context
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
-from services.ram_screens import SCREENSHOT_STORE, get_screenshot, put_screenshot
+from services.ram_screens import SCREENSHOT_STORE, get_latest_image, get_screenshot, put_screenshot
 from utils.security import check_upload_token, safe_pc_name, safe_screen_filename
 
 ACTIVITY_CHANGE_THRESHOLD_SECONDS = 5
@@ -90,8 +90,15 @@ def upload():
     last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
     data = file.read()
-    put_screenshot(filename, data, now, pc_name)
-    put_screenshot(last_filename, data, now)
+    mouse_metadata = {
+        'mouse_x': mouse_x,
+        'mouse_y': mouse_y,
+        'screen_width': screen_width,
+        'screen_height': screen_height,
+        'active_url': active_url,
+    }
+    put_screenshot(filename, data, now, pc_name, mouse_metadata)
+    put_screenshot(last_filename, data, now, metadata=mouse_metadata)
 
     conn = get_db()
     try:
@@ -140,3 +147,40 @@ def screens(filename):
     if data is None:
         return 'Screenshot not found in RAM', 404
     return send_file(BytesIO(data), mimetype='image/jpeg', max_age=0)
+
+
+@upload_bp.route('/stream/<agent_name>')
+@login_required
+def stream(agent_name):
+    safe_agent_name = safe_pc_name(agent_name)
+
+    def generate():
+        last_frame_key = None
+        try:
+            while True:
+                latest = get_latest_image(safe_agent_name)
+                if latest is not None:
+                    image_bytes, latest_filename, created_at, _metadata = latest
+                    frame_key = (latest_filename, created_at)
+                    if frame_key != last_frame_key:
+                        last_frame_key = frame_key
+                        yield (
+                            b'--frame\r\n'
+                            b'Content-Type: image/jpeg\r\n'
+                            + f'Content-Length: {len(image_bytes)}\r\n\r\n'.encode('ascii')
+                            + image_bytes
+                            + b'\r\n'
+                        )
+                time.sleep(0.05)
+        except GeneratorExit:
+            logger.info('MJPEG stream disconnected for agent %s', safe_agent_name)
+            return
+        except Exception:
+            logger.exception('MJPEG stream failed for agent %s', safe_agent_name)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='multipart/x-mixed-replace; boundary=frame',
+        headers={'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'},
+        direct_passthrough=True,
+    )
