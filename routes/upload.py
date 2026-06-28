@@ -34,7 +34,7 @@ def upload():
     last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
     data = file.read()
-    put_screenshot(filename, data, now)
+    put_screenshot(filename, data, now, pc_name)
     put_screenshot(last_filename, data, now)
 
     conn = get_db()
