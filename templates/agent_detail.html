@@ -11,7 +11,7 @@
 <main class="detail-main">
   <section class="detail-hero">
     <div><p class="eyebrow">Agent detail</p><h1>{{ full_name }}</h1><div class="subtitle">PC: {{ agent_name }}{% if department %} • {{ department }}{% endif %}{% if role %} • {{ role }}{% endif %}<br>Son aktivlik: {{ last_seen_str }}</div><div class="subtitle detail-meta">Aktiv pəncərə: {{ active_window or '—' }}<br>Aktiv proses: {{ active_process or '—' }}</div>{% if note %}<div class="subtitle">Qeyd: {{ note }}</div>{% endif %}</div>
-    <div class="detail-actions">{% if is_online %}<span class="pill pill-online">● ONLINE</span>{% else %}<span class="pill pill-offline">● OFFLINE</span>{% endif %}<a href="{{ url_for('main.agent_gallery', agent_name=agent_name) }}" class="btn-gallery">📸 Son 1 saatlıq qalereya</a></div>
+    <div class="detail-actions">{% if is_online %}<span class="pill pill-online">● ONLINE</span>{% else %}<span class="pill pill-offline">● OFFLINE</span>{% endif %}<a href="{{ url_for('main.agent_gallery', agent_name=agent_name) }}" class="btn-gallery">📸 Son 5 dəqiqəlik qalereya</a></div>
   </section>
   <section class="live-box live-box-large"><div class="live-header"><div><b>Canlı görüntü</b><span class="subtitle">0.5s interval ilə yenilənir</span></div><div id="live-status" class="subtitle">Yüklənir...</div></div><img id="live-img" class="live-img" src="" alt="Live screenshot"><div class="live-meta" id="live-meta"></div></section>
 </main>

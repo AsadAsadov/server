@@ -34,8 +34,8 @@ def upload():
     last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
     data = file.read()
-    put_screenshot(filename, data)
-    put_screenshot(last_filename, data)
+    put_screenshot(filename, data, now)
+    put_screenshot(last_filename, data, now)
 
     conn = get_db()
     try:
@@ -55,8 +55,12 @@ def upload():
         conn.close()
 
     now_ts = time.time()
-    if now_ts - _LAST_CLEANUP >= 600:
-        cleanup_server_screens(current_app.config['KEEP_MINUTES'], SCREENSHOT_STORE)
+    if now_ts - _LAST_CLEANUP >= 60:
+        cleanup_server_screens(
+            current_app.config['GALLERY_KEEP_MINUTES'],
+            SCREENSHOT_STORE,
+            current_app.config['MAX_RAM_SHOTS_PER_AGENT'],
+        )
         _LAST_CLEANUP = now_ts
     return 'OK', 200
 
@@ -64,6 +68,11 @@ def upload():
 @upload_bp.route('/screens/<path:filename>')
 @login_required
 def screens(filename):
+    cleanup_server_screens(
+        current_app.config['GALLERY_KEEP_MINUTES'],
+        SCREENSHOT_STORE,
+        current_app.config['MAX_RAM_SHOTS_PER_AGENT'],
+    )
     safe_name = safe_screen_filename(filename)
     data = get_screenshot(safe_name)
     if data is None:
