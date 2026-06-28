@@ -35,8 +35,14 @@ def utc_to_baku(value: str | datetime | None) -> datetime | None:
     return dt.astimezone(BAKU_TZ)
 
 
-def format_baku(value: str | datetime | None) -> str:
+def format_baku_time(value: str | datetime | None) -> str:
+    """Format a UTC datetime/string for display in Azerbaijan time (Asia/Baku)."""
     dt = utc_to_baku(value)
     if dt is None:
         return '—'
     return dt.strftime(DISPLAY_FORMAT)
+
+
+def format_baku(value: str | datetime | None) -> str:
+    """Backward-compatible alias for Baku display formatting."""
+    return format_baku_time(value)

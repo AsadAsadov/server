@@ -1,16 +1,17 @@
 import logging
 import time
 from datetime import datetime
-from flask import Blueprint, Response, current_app, request
+from io import BytesIO
+from flask import Blueprint, current_app, request, send_file
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
+from services.ram_screens import SCREENSHOT_STORE, get_screenshot, put_screenshot
 from utils.security import check_upload_token, safe_pc_name, safe_screen_filename
 
 upload_bp = Blueprint('upload', __name__)
 logger = logging.getLogger(__name__)
 _LAST_CLEANUP = 0
-SCREENSHOT_STORE: dict[str, bytes] = {}
 
 
 @upload_bp.route('/upload', methods=['POST'])
@@ -33,8 +34,8 @@ def upload():
     last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
     data = file.read()
-    SCREENSHOT_STORE[filename] = data
-    SCREENSHOT_STORE[last_filename] = data
+    put_screenshot(filename, data)
+    put_screenshot(last_filename, data)
 
     conn = get_db()
     try:
@@ -64,7 +65,7 @@ def upload():
 @login_required
 def screens(filename):
     safe_name = safe_screen_filename(filename)
-    data = SCREENSHOT_STORE.get(safe_name)
+    data = get_screenshot(safe_name)
     if data is None:
         return 'Screenshot not found in RAM', 404
-    return Response(data, mimetype='image/jpeg', headers={'Cache-Control': 'no-store, max-age=0'})
+    return send_file(BytesIO(data), mimetype='image/jpeg', max_age=0)

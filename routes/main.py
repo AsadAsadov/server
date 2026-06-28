@@ -3,7 +3,7 @@ from flask import Blueprint, redirect, render_template, request, url_for
 from auth import login_required
 from database import get_db
 from utils.security import csrf_protect, safe_pc_name
-from utils.timezone import format_baku
+from utils.timezone import format_baku_time
 
 main_bp = Blueprint('main', __name__)
 
@@ -36,7 +36,7 @@ def dashboard():
         agents.append({
             'name': name,
             'last_seen': last_seen,
-            'last_seen_display': format_baku(last_seen),
+            'last_seen_display': format_baku_time(last_seen),
             'online': last_seen >= online_threshold,
             'full_name': emp['full_name'] if emp and emp['full_name'] else None,
             'department': emp['department'] if emp else None,
@@ -118,7 +118,7 @@ def agent_detail(agent_name):
         department=emp['department'] if emp else '',
         role=emp['role'] if emp else '',
         note=emp['note'] if emp else '',
-        last_seen_str=format_baku(last_seen),
+        last_seen_str=format_baku_time(last_seen),
         is_online=is_online,
         active_window=a['active_window'],
         active_process=a['active_process'],
