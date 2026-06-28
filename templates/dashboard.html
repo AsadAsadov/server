@@ -20,18 +20,19 @@
       <button class="stat-item stat-offline" type="button" data-filter="offline"><span>Offline</span><b>{{ agents|rejectattr('online')|list|length }}</b></button>
     </div>
   </section>
+  <div class="toolbar-panel"><label class="search-wrap" for="agent-search"><span>🔎</span><input id="agent-search" type="search" placeholder="İşçi, PC, şöbə və ya proses axtar..." autocomplete="off"></label></div>
   <div class="section-title"><span id="agent-count">{{ agents|length }}</span> agent göstərilir</div>
   <div id="emptyState" class="empty-state" hidden></div>
   <div class="grid" id="agent-grid">
     {% for a in agents %}
-    <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}">
+    <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}" data-search="{{ (a.name ~ ' ' ~ (a.full_name or '') ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.role or '') ~ ' ' ~ (a.active_window or '') ~ ' ' ~ (a.active_process or ''))|lower|e }}">
       <div class="card-header">
         <div><div class="name">{{ a.name }}</div>{% if a.full_name %}<div class="emp-line">İşçi: {{ a.full_name }}</div>{% endif %}<div class="emp-line">{% if a.department %}{{ a.department }}{% endif %}{% if a.role %}{% if a.department %} • {% endif %}{{ a.role }}{% endif %}</div></div>
         <div class="status {{ 'online' if a.online else 'offline' }}"><span></span>{{ 'ONLINE' if a.online else 'OFFLINE' }}</div>
       </div>
       <div class="card-body">
         <div class="meta-row"><span>Son aktivlik</span><b>{{ a.last_seen_display }}</b></div>
-        <div class="small info-box">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}</div>
+        <div class="small info-box">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}{% if a.active_url_domain %}<br>URL: <span class="url-text">{{ a.active_url_domain }}</span>{% endif %}</div>
         <div class="thumb-wrap {{ 'is-offline' if not a.online else '' }}">
           {% if a.last_filename %}<img src="/screens/{{ a.last_filename }}?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}" alt="{{ a.name }} screenshot" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden')">{% endif %}
           <div class="thumb-placeholder {{ '' if not a.last_filename else 'hidden' }}">RAM görüntü yoxdur</div>
@@ -50,23 +51,29 @@ document.addEventListener('DOMContentLoaded',()=>{
   const countEl=document.getElementById('agent-count');
   const emptyEl=document.getElementById('emptyState');
   const emptyMessages={all:'Agent yoxdur',online:'Online istifadəçi yoxdur',offline:'Offline istifadəçi yoxdur'};
+  const searchInput=document.getElementById('agent-search');
+  let currentFilter='all';
 
   function applyFilter(filter, activeButton){
     let visible=0;
     cards.forEach(card=>{
-      const show=filter==='all'||card.dataset.status===filter;
+      const statusMatch=filter==='all'||card.dataset.status===filter;
+      const query=(searchInput?.value||'').trim().toLowerCase();
+      const searchMatch=!query||(card.dataset.search||'').includes(query);
+      const show=statusMatch&&searchMatch;
       card.style.display=show?'':'none';
       if(show)visible++;
     });
     filterButtons.forEach(btn=>btn.classList.toggle('active',btn===activeButton));
     if(countEl)countEl.textContent=visible;
     if(emptyEl){
-      emptyEl.textContent=emptyMessages[filter]||emptyMessages.all;
+      emptyEl.textContent=(searchInput?.value||'').trim()?'Nəticə tapılmadı':(emptyMessages[filter]||emptyMessages.all);
       emptyEl.hidden=visible!==0;
     }
   }
 
-  filterButtons.forEach(btn=>btn.addEventListener('click',()=>applyFilter(btn.dataset.filter||'all',btn)));
+  filterButtons.forEach(btn=>btn.addEventListener('click',()=>{currentFilter=btn.dataset.filter||'all';applyFilter(currentFilter,btn);}));
+  searchInput?.addEventListener('input',()=>applyFilter(currentFilter,document.querySelector('.stat-item.active')));
 
   const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
   async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}

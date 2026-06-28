@@ -10,6 +10,12 @@ def get_db():
     return conn
 
 
+def _ensure_column(cur, table, column, definition):
+    columns = [row['name'] for row in cur.execute(f'PRAGMA table_info({table})').fetchall()]
+    if column not in columns:
+        cur.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -23,6 +29,11 @@ def init_db():
             process_list TEXT
         )
     ''')
+    _ensure_column(cur, 'agents', 'mouse_x', 'REAL')
+    _ensure_column(cur, 'agents', 'mouse_y', 'REAL')
+    _ensure_column(cur, 'agents', 'screen_width', 'REAL')
+    _ensure_column(cur, 'agents', 'screen_height', 'REAL')
+    _ensure_column(cur, 'agents', 'active_url', 'TEXT')
     cur.execute('''
         CREATE TABLE IF NOT EXISTS screenshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,8 +52,22 @@ def init_db():
             note TEXT
         )
     ''')
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS activity_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_name TEXT,
+            active_process TEXT,
+            active_window TEXT,
+            active_url TEXT,
+            started_at TEXT,
+            ended_at TEXT,
+            duration_seconds INTEGER
+        )
+    ''')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_agents_name ON agents(name)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_screenshots_agent_created ON screenshots(agent_name, created_at)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_employees_agent_name ON employees(agent_name)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_activity_agent_started ON activity_events(agent_name, started_at)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_activity_agent_open ON activity_events(agent_name, ended_at)')
     conn.commit()
     conn.close()
