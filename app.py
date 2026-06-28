@@ -18,7 +18,6 @@ def create_app():
     app.secret_key = app.config['SECRET_KEY']
     app.permanent_session_lifetime = timedelta(minutes=app.config['PERMANENT_SESSION_LIFETIME_MINUTES'])
 
-    Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
     Path('logs').mkdir(exist_ok=True)
     _configure_logging(app)
 

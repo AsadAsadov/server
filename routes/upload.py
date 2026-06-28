@@ -1,11 +1,12 @@
+import io
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
-from flask import Blueprint, current_app, request, send_from_directory
+from flask import Blueprint, current_app, request, send_file
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
+from services.ram_screens import ram_screens
 from utils.security import check_upload_token, safe_pc_name, safe_screen_filename
 
 upload_bp = Blueprint('upload', __name__)
@@ -27,21 +28,27 @@ def upload():
     if not file:
         return 'No file', 400
 
-    now = datetime.utcnow()
-    timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
-    upload_dir = Path(current_app.config['UPLOAD_FOLDER'])
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    filename = safe_screen_filename(f'{pc_name}_{timestamp}.jpg')
-    full_path = upload_dir / filename
-    last_image = upload_dir / safe_screen_filename(f'{pc_name}_last.jpg')
+    data = file.read()
+    if not data:
+        return 'Empty file', 400
 
-    try:
-        data = file.read()
-        full_path.write_bytes(data)
-        last_image.write_bytes(data)
-    except OSError:
-        logger.exception('Failed writing upload for pc=%s', pc_name)
-        return 'File write error', 500
+    now = datetime.utcnow()
+    timestamp = now.strftime('%Y-%m-%d_%H-%M-%S_%f')
+    filename = safe_screen_filename(f'{pc_name}_{timestamp}.jpg')
+    metadata = {
+        'active_window': active_window,
+        'active_process': active_process,
+        'process_list': process_list,
+    }
+    ram_screens.put(
+        pc_name,
+        filename,
+        data,
+        now,
+        metadata,
+        current_app.config['KEEP_MINUTES'],
+        current_app.config['MAX_RAM_SHOTS_PER_AGENT'],
+    )
 
     conn = get_db()
     try:
@@ -57,12 +64,15 @@ def upload():
         ''', (pc_name, now.isoformat(), active_window, active_process, process_list))
         cur.execute('INSERT INTO screenshots (agent_name, filename, created_at) VALUES (?, ?, ?)', (pc_name, filename, now.isoformat()))
         conn.commit()
+    except Exception:
+        logger.exception('Failed saving upload metadata for pc=%s', pc_name)
+        return 'Metadata write error', 500
     finally:
         conn.close()
 
     now_ts = time.time()
     if now_ts - _LAST_CLEANUP >= 600:
-        cleanup_server_screens(current_app.config['UPLOAD_FOLDER'], current_app.config['KEEP_MINUTES'])
+        cleanup_server_screens(current_app.config['KEEP_MINUTES'], current_app.config['MAX_RAM_SHOTS_PER_AGENT'])
         _LAST_CLEANUP = now_ts
     return 'OK', 200
 
@@ -70,4 +80,7 @@ def upload():
 @upload_bp.route('/screens/<path:filename>')
 @login_required
 def screens(filename):
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], safe_screen_filename(filename))
+    shot = ram_screens.get_by_filename(safe_screen_filename(filename))
+    if not shot:
+        return 'Screenshot not found in RAM', 404
+    return send_file(io.BytesIO(shot.data), mimetype='image/jpeg', download_name=shot.filename, max_age=0)
