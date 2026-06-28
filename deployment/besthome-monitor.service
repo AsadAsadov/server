@@ -1,0 +1,15 @@
+[Unit]
+Description=BestHome Monitor Flask app
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/besthome-monitor
+EnvironmentFile=/opt/besthome-monitor/.env
+ExecStart=/opt/besthome-monitor/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5050 wsgi:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
