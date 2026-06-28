@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from auth import login_required
 from database import get_db
 from utils.security import safe_pc_name
+from utils.timezone import format_baku
 
 api_bp = Blueprint('api', __name__)
 
@@ -16,7 +17,7 @@ def api_agent_last(agent_name):
     conn.close()
     if not row:
         return jsonify({'ok': False}), 404
-    return jsonify({'ok': True, 'filename': row['filename'], 'created_at': row['created_at']})
+    return jsonify({'ok': True, 'filename': row['filename'], 'created_at': format_baku(row['created_at'])})
 
 
 @api_bp.route('/api/agent/<agent_name>/stats1h')
@@ -50,4 +51,4 @@ def api_agent_shots(agent_name):
         ORDER BY created_at DESC LIMIT ? OFFSET ?
     ''', (agent_name, since.isoformat(), limit, offset)).fetchall()
     conn.close()
-    return jsonify([{'filename': r['filename'], 'created_at': datetime.fromisoformat(r['created_at']).strftime('%Y-%m-%d %H:%M:%S')} for r in rows])
+    return jsonify([{'filename': r['filename'], 'created_at': format_baku(r['created_at'])} for r in rows])

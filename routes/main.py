@@ -3,6 +3,7 @@ from flask import Blueprint, redirect, render_template, request, url_for
 from auth import login_required
 from database import get_db
 from utils.security import csrf_protect, safe_pc_name
+from utils.timezone import format_baku
 
 main_bp = Blueprint('main', __name__)
 
@@ -18,7 +19,6 @@ def dashboard():
     agents_rows = cur.fetchall()
     cur.execute('SELECT * FROM employees')
     emps_rows = cur.fetchall()
-    conn.close()
 
     emp_by_agent = {e['agent_name']: e for e in emps_rows}
     agents = []
@@ -29,16 +29,23 @@ def dashboard():
         except (TypeError, ValueError):
             last_seen = datetime.min
         emp = emp_by_agent.get(name)
+        last_shot = conn.execute(
+            'SELECT filename FROM screenshots WHERE agent_name = ? ORDER BY created_at DESC LIMIT 1',
+            (name,),
+        ).fetchone()
         agents.append({
             'name': name,
             'last_seen': last_seen,
+            'last_seen_display': format_baku(last_seen),
             'online': last_seen >= online_threshold,
             'full_name': emp['full_name'] if emp and emp['full_name'] else None,
             'department': emp['department'] if emp else None,
             'role': emp['role'] if emp else None,
             'active_window': a['active_window'],
             'active_process': a['active_process'],
+            'last_filename': last_shot['filename'] if last_shot else None,
         })
+    conn.close()
     return render_template('dashboard.html', agents=agents)
 
 
@@ -111,7 +118,7 @@ def agent_detail(agent_name):
         department=emp['department'] if emp else '',
         role=emp['role'] if emp else '',
         note=emp['note'] if emp else '',
-        last_seen_str=last_seen.strftime('%Y-%m-%d %H:%M:%S'),
+        last_seen_str=format_baku(last_seen),
         is_online=is_online,
         active_window=a['active_window'],
         active_process=a['active_process'],
