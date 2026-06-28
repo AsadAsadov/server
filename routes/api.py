@@ -3,7 +3,7 @@ from flask import Blueprint, current_app, jsonify, request
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
-from services.ram_screens import SCREENSHOT_STORE
+from services.ram_screens import SCREENSHOT_STORE, list_agent_screenshots
 from utils.security import safe_pc_name
 from utils.timezone import format_baku_time
 
@@ -47,12 +47,10 @@ def api_agent_shots(agent_name):
     offset = max(int(request.args.get('offset', 0)), 0)
     limit = min(max(int(request.args.get('limit', 60)), 1), 200)
     cleanup_server_screens(current_app.config['GALLERY_KEEP_MINUTES'], SCREENSHOT_STORE, current_app.config['MAX_RAM_SHOTS_PER_AGENT'])
-    since = datetime.utcnow() - timedelta(minutes=current_app.config['GALLERY_KEEP_MINUTES'])
-    conn = get_db()
-    rows = conn.execute('''
-        SELECT filename, created_at FROM screenshots
-        WHERE agent_name = ? AND created_at >= ?
-        ORDER BY created_at DESC LIMIT ? OFFSET ?
-    ''', (agent_name, since.isoformat(), limit, offset)).fetchall()
-    conn.close()
-    return jsonify([{'filename': r['filename'], 'created_at': format_baku_time(r['created_at'])} for r in rows])
+    rows = list_agent_screenshots(
+        agent_name,
+        current_app.config['GALLERY_KEEP_MINUTES'],
+        limit,
+        offset,
+    )
+    return jsonify([{'filename': filename, 'created_at': format_baku_time(created_at)} for filename, created_at in rows])
