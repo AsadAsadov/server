@@ -8,19 +8,20 @@
 </head>
 <body>
 <header class="app-header">
-  <div class="brand"><div class="badge">BH</div><div><div class="brand-title">BestHome Monitor</div><div class="subtitle">İşçi komputerlərinin canlı izlənməsi</div></div></div>
+  <div class="brand"><div class="badge">BH</div><div><div class="brand-title">BestHome Monitor</div><div class="subtitle">RAM-only canlı işçi monitorinqi</div></div></div>
   <div class="header-actions"><a href="{{ url_for('main.employees') }}" class="btn-secondary">👥 İşçi paneli</a><a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıxış</a></div>
 </header>
-<main>
+<main class="dashboard-main">
   <section class="hero-panel">
-    <div><p class="eyebrow">Monitor paneli</p><h1>Agentlər</h1><p class="subtitle">Online/offline status, son aktivlik və canlı görüntülər</p></div>
+    <div><p class="eyebrow">Monitor paneli</p><h1>Agentlər</h1><p class="subtitle">Online/offline status, son aktivlik və RAM-da saxlanan canlı görüntülər</p></div>
     <div class="stats-box" role="group" aria-label="Agent filterləri">
-      <button class="stat-item active" type="button" data-filter="all">Ümumi <b>{{ agents|length }}</b></button>
-      <button class="stat-item stat-online" type="button" data-filter="online">Online <b>{{ agents|selectattr('online')|list|length }}</b></button>
-      <button class="stat-item stat-offline" type="button" data-filter="offline">Offline <b>{{ agents|rejectattr('online')|list|length }}</b></button>
+      <button class="stat-item active" type="button" data-filter="all"><span>Ümumi</span><b>{{ agents|length }}</b></button>
+      <button class="stat-item stat-online" type="button" data-filter="online"><span>Online</span><b>{{ agents|selectattr('online')|list|length }}</b></button>
+      <button class="stat-item stat-offline" type="button" data-filter="offline"><span>Offline</span><b>{{ agents|rejectattr('online')|list|length }}</b></button>
     </div>
   </section>
   <div class="section-title"><span id="agent-count">{{ agents|length }}</span> agent göstərilir</div>
+  <div class="empty-state hidden" id="empty-state">Agent yoxdur</div>
   <div class="grid" id="agent-grid">
     {% for a in agents %}
     <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}">
@@ -33,7 +34,7 @@
         <div class="small info-box">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}</div>
         <div class="thumb-wrap {{ 'is-offline' if not a.online else '' }}">
           {% if a.last_filename %}<img src="/screens/{{ a.last_filename }}?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}" alt="{{ a.name }} screenshot" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden')">{% endif %}
-          <div class="thumb-placeholder {{ '' if not a.last_filename else 'hidden' }}">Görüntü yoxdur</div>
+          <div class="thumb-placeholder {{ '' if not a.last_filename else 'hidden' }}">RAM görüntü yoxdur</div>
           {% if not a.online %}<div class="offline-watermark">OFFLINE</div>{% endif %}
         </div>
         <a href="{{ url_for('main.agent_detail', agent_name=a.name) }}" class="view-link">🔍 Agent səhifəsi</a>
@@ -46,7 +47,9 @@
 const filterButtons=Array.from(document.querySelectorAll('.stat-item[data-filter]'));
 const cards=Array.from(document.querySelectorAll('.agent-card'));
 const countEl=document.getElementById('agent-count');
-filterButtons.forEach(btn=>btn.addEventListener('click',()=>{const filter=btn.dataset.filter;filterButtons.forEach(b=>b.classList.toggle('active',b===btn));let visible=0;cards.forEach(card=>{const show=filter==='all'||card.dataset.status===filter;card.hidden=!show;if(show)visible++;});countEl.textContent=visible;}));
+const emptyEl=document.getElementById('empty-state');
+const emptyMessages={all:'Agent yoxdur',online:'Online istifadəçi yoxdur',offline:'Offline istifadəçi yoxdur'};
+filterButtons.forEach(btn=>btn.addEventListener('click',()=>{const filter=btn.dataset.filter;filterButtons.forEach(b=>b.classList.toggle('active',b===btn));let visible=0;cards.forEach(card=>{const show=filter==='all'||card.dataset.status===filter;card.hidden=!show;if(show)visible++;});countEl.textContent=visible;emptyEl.textContent=emptyMessages[filter]||'Agent yoxdur';emptyEl.classList.toggle('hidden',visible!==0);}));
 const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
 async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}
 setInterval(()=>liveThumbs.forEach(refreshLiveThumb),1000);
