@@ -52,9 +52,7 @@ def cleanup_server_screens(
                     [(filename,) for filename in filenames_to_remove],
                 )
             for filename in filenames_to_remove:
-                removed = screenshot_store.pop(filename, None)
-                if removed is not None:
-                    logger.info('Old RAM screenshot deleted: %s', filename)
+                logger.info('Old screenshot metadata cleaned: %s', filename)
         conn.commit()
     finally:
         conn.close()
