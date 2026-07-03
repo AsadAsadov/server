@@ -36,8 +36,8 @@ try:
 except ImportError:
     Desktop = None
 
-SERVER_URL = "http://88.222.221.40:5050/upload"
-UPLOAD_TOKEN = "BURAYA_SERVER_ENV_UPLOAD_TOKEN_YAZILACAQ"
+SERVER_URL = "https://monitor.besthome.az/upload"
+UPLOAD_TOKEN = "BH_MONITOR_UPLOAD_9fK2xP7mQa41Zr8LsV6nWdE5TyUcJ3"
 REQUEST_TIMEOUT = 10
 JPEG_QUALITY = 40
 PC_NAME = socket.gethostname()
