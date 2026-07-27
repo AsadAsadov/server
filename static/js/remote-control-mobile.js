@@ -12,9 +12,14 @@
   if(!stage||!image||!cursor||!keyboardButton||!exitButton||!keyboardInput)return;
 
   var isMobile=window.matchMedia('(pointer: coarse)').matches||window.innerWidth<=820;
-  var TRACKPAD_SPEED=1.25;
+  var TRACKPAD_SPEED=0.92;
+  var TRACKPAD_DEAD_ZONE=0.65;
+  var TRACKPAD_MAX_STEP=18;
+  var TRACKPAD_SMOOTHING=0.55;
+
   var touchState=null;
   var virtualCursor=null;
+  var smoothedDelta={x:0,y:0};
   var singleTapTimer=null;
   var longPressTimer=null;
   var lastTapAt=0;
@@ -131,13 +136,46 @@
     }));
   }
 
+  function resetTrackpadFilter(){
+    smoothedDelta.x=0;
+    smoothedDelta.y=0;
+  }
+
+  function stabilizeDelta(rawX,rawY){
+    rawX=clamp(rawX,-TRACKPAD_MAX_STEP,TRACKPAD_MAX_STEP);
+    rawY=clamp(rawY,-TRACKPAD_MAX_STEP,TRACKPAD_MAX_STEP);
+
+    if(Math.abs(rawX)<TRACKPAD_DEAD_ZONE)rawX=0;
+    if(Math.abs(rawY)<TRACKPAD_DEAD_ZONE)rawY=0;
+
+    var absX=Math.abs(rawX);
+    var absY=Math.abs(rawY);
+
+    if(absX>absY*2.2&&absY<3){
+      rawY=0;
+    }else if(absY>absX*2.2&&absX<3){
+      rawX=0;
+    }
+
+    smoothedDelta.x=(smoothedDelta.x*(1-TRACKPAD_SMOOTHING))+(rawX*TRACKPAD_SMOOTHING);
+    smoothedDelta.y=(smoothedDelta.y*(1-TRACKPAD_SMOOTHING))+(rawY*TRACKPAD_SMOOTHING);
+
+    if(Math.abs(smoothedDelta.x)<0.35)smoothedDelta.x=0;
+    if(Math.abs(smoothedDelta.y)<0.35)smoothedDelta.y=0;
+
+    return {x:smoothedDelta.x,y:smoothedDelta.y};
+  }
+
   function moveVirtualCursor(deltaX,deltaY){
     if(!remoteIsActive())return;
 
+    var stable=stabilizeDelta(deltaX,deltaY);
+    if(stable.x===0&&stable.y===0)return;
+
     var metrics=imageMetrics();
     var position=ensureVirtualCursor();
-    position.x=clamp(position.x+(deltaX*TRACKPAD_SPEED/metrics.width),0,1);
-    position.y=clamp(position.y+(deltaY*TRACKPAD_SPEED/metrics.height),0,1);
+    position.x=clamp(position.x+(stable.x*TRACKPAD_SPEED/metrics.width),0,1);
+    position.y=clamp(position.y+(stable.y*TRACKPAD_SPEED/metrics.height),0,1);
 
     dispatchMouseAtVirtual('mousemove',0);
   }
@@ -200,6 +238,7 @@
     if(!remoteIsActive()){
       autoFocusedForSession=false;
       virtualCursor=null;
+      resetTrackpadFilter();
       hideCursor();
       keyboardInput.blur();
       return;
@@ -223,6 +262,7 @@
     if(!remoteIsActive())return;
     event.preventDefault();
     clearTimers();
+    resetTrackpadFilter();
 
     ensureVirtualCursor();
     renderVirtualCursor();
@@ -260,6 +300,7 @@
     if(event.touches.length===2){
       clearTimers();
       touchState=null;
+      resetTrackpadFilter();
 
       var currentY=(event.touches[0].clientY+event.touches[1].clientY)/2;
       if(lastTwoFingerY!==null){
@@ -283,7 +324,7 @@
     touchState.lastTouchX=touch.clientX;
     touchState.lastTouchY=touch.clientY;
 
-    if(Math.abs(touch.clientX-touchState.startX)>4||Math.abs(touch.clientY-touchState.startY)>4){
+    if(Math.abs(touch.clientX-touchState.startX)>5||Math.abs(touch.clientY-touchState.startY)>5){
       touchState.moved=true;
       clearTimers();
     }
@@ -295,6 +336,7 @@
     if(!remoteIsActive())return;
     event.preventDefault();
     clearTimers();
+    resetTrackpadFilter();
     lastTwoFingerY=null;
 
     if(!touchState)return;
@@ -324,6 +366,7 @@
 
   stage.addEventListener('touchcancel',function(){
     clearTimers();
+    resetTrackpadFilter();
     touchState=null;
     lastTwoFingerY=null;
   },{passive:false});
@@ -416,6 +459,7 @@
 
   window.addEventListener('orientationchange',function(){
     keyboardInput.blur();
+    resetTrackpadFilter();
     window.setTimeout(function(){
       if(remoteIsActive()&&virtualCursor){
         renderVirtualCursor();
@@ -426,6 +470,7 @@
   document.addEventListener('visibilitychange',function(){
     if(document.hidden){
       keyboardInput.blur();
+      resetTrackpadFilter();
     }
   });
 
