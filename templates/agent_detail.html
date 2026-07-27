@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="az">
 <head>
   <meta charset="utf-8">
   <title>{{ full_name }} - BestHome Monitor</title>
@@ -7,33 +7,218 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-<header class="app-header focus-hide"><a href="{{ url_for('main.dashboard') }}" class="back">← Dashboard</a><div class="subtitle">BestHome Monitor</div></header>
+<header class="app-header focus-hide">
+  <div class="header-inner">
+    <a href="{{ url_for('main.dashboard') }}" class="back">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>
+      Dashboard
+    </a>
+    <a class="brand" href="{{ url_for('main.dashboard') }}">
+      <span class="badge">BH</span>
+      <span><span class="brand-title">BestHome Monitor</span><span class="brand-subtitle">Agent detalları</span></span>
+    </a>
+  </div>
+</header>
+
 <main class="detail-main" id="detail-main">
-  <section class="detail-hero focus-hide">
-    <div><p class="eyebrow">Agent detail</p><h1>{{ full_name }}</h1><div class="subtitle">PC: {{ agent_name }}{% if department %} • {{ department }}{% endif %}{% if role %} • {{ role }}{% endif %}<br>Son aktivlik: {{ last_seen_str }}</div><div class="subtitle detail-meta">Aktiv pəncərə: {{ active_window or '—' }}<br>Aktiv proses: {{ active_process or '—' }}{% if active_url %}<br>URL: <span class="url-text">{{ active_url }}</span>{% endif %}</div>{% if note %}<div class="subtitle">Qeyd: {{ note }}</div>{% endif %}</div>
-    <div class="detail-actions">{% if is_online %}<span class="pill pill-online">● ONLINE</span>{% else %}<span class="pill pill-offline">● OFFLINE</span>{% endif %}<a href="{{ url_for('main.agent_gallery', agent_name=agent_name) }}" class="btn-gallery">📸 Son 5 dəqiqəlik qalereya</a><button id="stream-btn" type="button" class="btn-stream">⚡ Live Stream</button><button id="focus-btn" type="button" class="btn-focus">🖥 Focus Mode</button></div>
+  <section class="agent-summary focus-hide">
+    <div class="agent-summary-main">
+      <div class="agent-summary-title">
+        <div class="agent-avatar">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        </div>
+        <div>
+          <p class="eyebrow">Agent məlumatları</p>
+          <h1>{{ full_name }}</h1>
+          <div class="agent-summary-pc">{{ agent_name }}{% if department %} · {{ department }}{% endif %}{% if role %} · {{ role }}{% endif %}</div>
+        </div>
+      </div>
+
+      <div class="agent-detail-grid">
+        <div class="detail-tile"><span>Son aktivlik</span><b>{{ last_seen_str }}</b></div>
+        <div class="detail-tile"><span>Aktiv proses</span><b>{{ active_process or '—' }}</b></div>
+        <div class="detail-tile"><span>Aktiv pəncərə</span><b title="{{ active_window or '' }}">{{ active_window or '—' }}</b></div>
+        {% if active_url %}<div class="detail-tile"><span>Aktiv URL</span><b title="{{ active_url }}">{{ active_url }}</b></div>{% endif %}
+        {% if note %}<div class="detail-tile"><span>Qeyd</span><b title="{{ note }}">{{ note }}</b></div>{% endif %}
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <span class="status-badge {{ 'status-online' if is_online else 'status-offline' }}"><i class="status-dot"></i>{{ 'ONLINE' if is_online else 'OFFLINE' }}</span>
+      <a href="{{ url_for('main.agent_gallery', agent_name=agent_name) }}" class="btn-gallery">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        Qalereya
+      </a>
+      <button id="stream-btn" type="button" class="btn-stream">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5v14l11-7z"/></svg>
+        Canlı axın
+      </button>
+      <button id="focus-btn" type="button" class="btn-focus">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        Tam ekran
+      </button>
+    </div>
   </section>
-  <section class="live-box live-box-large" id="live-box"><div class="live-header"><div><b>Canlı görüntü</b><span class="subtitle" id="live-mode-label">Normal polling: 0.5s interval ilə yenilənir</span></div><div id="live-status" class="subtitle">Yüklənir...</div></div><div class="live-stage" id="live-stage"><img id="live-img" class="live-img" src="" alt="Live screenshot"><div id="mouse-cursor" class="mouse-cursor" hidden></div></div><div class="live-meta" id="live-meta"></div></section>
-  <section class="activity-panel focus-hide"><div class="activity-head"><div><b>Bugünkü aktivlik</b><span class="subtitle">Proses/pəncərə/URL əsasında kompakt timeline</span></div><button id="activity-toggle" type="button" class="btn-secondary" hidden>Hamısını göstər</button></div><div id="activity-list" class="activity-list"><div class="subtitle">Yüklənir...</div></div></section>
+
+  <section class="live-panel" id="live-box">
+    <div class="panel-header focus-hide">
+      <div>
+        <div class="panel-title">Canlı ekran</div>
+        <div class="panel-subtitle" id="live-mode-label">Görüntü hər 0,5 saniyədə yenilənir</div>
+      </div>
+      <div id="live-status" class="live-status-badge"><i class="status-dot"></i>Yüklənir</div>
+    </div>
+
+    <div class="live-stage" id="live-stage">
+      <img id="live-img" class="live-img hidden" alt="Canlı ekran görüntüsü">
+      <div id="live-empty" class="live-empty">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        <b>Görüntü gözlənilir</b>
+        <span>Agent serverə qoşulduqda son ekran görüntüsü burada görünəcək.</span>
+      </div>
+      <div id="mouse-cursor" class="mouse-cursor" hidden></div>
+    </div>
+    <div class="live-meta" id="live-meta"></div>
+  </section>
+
+  <section class="activity-panel focus-hide">
+    <div class="activity-head">
+      <div>
+        <div class="panel-title">Bugünkü aktivlik</div>
+        <div class="panel-subtitle">İstifadə olunan proqramlar və aktiv pəncərələr</div>
+      </div>
+      <button id="activity-toggle" type="button" class="btn-secondary" hidden>Hamısını göstər</button>
+    </div>
+    <div id="activity-list" class="activity-list"><div class="activity-empty">Aktivlik məlumatları yüklənir...</div></div>
+  </section>
 </main>
-<div id="modal"><span id="modal-close">✕</span><img id="modal-img"></div>
+
+<div id="modal"><span id="modal-close">✕</span><img id="modal-img" alt="Ekran görüntüsü"></div>
+
 <script>
-const agentName={{ agent_name|tojson }};
-const imgEl=document.getElementById('live-img'),metaEl=document.getElementById('live-meta'),statusEl=document.getElementById('live-status'),cursorEl=document.getElementById('mouse-cursor'),stageEl=document.getElementById('live-stage'),streamBtn=document.getElementById('stream-btn'),modeLabel=document.getElementById('live-mode-label');
-let lastMouse=null,showAllActivity=false,activityRows=[],isStreamMode=false,pollTimer=null,mouseTimer=null;
-function positionCursor(){if(!lastMouse||!imgEl.naturalWidth){cursorEl.hidden=true;return;}const rect=imgEl.getBoundingClientRect();const stageRect=stageEl.getBoundingClientRect();const imgRatio=imgEl.naturalWidth/imgEl.naturalHeight;const boxRatio=rect.width/rect.height;let w=rect.width,h=rect.height,offX=0,offY=0;if(boxRatio>imgRatio){w=h*imgRatio;offX=(rect.width-w)/2;}else{h=w/imgRatio;offY=(rect.height-h)/2;}const x=offX+(lastMouse.mouse_x/lastMouse.screen_width)*w;const y=offY+(lastMouse.mouse_y/lastMouse.screen_height)*h;cursorEl.style.left=(rect.left-stageRect.left+x)+'px';cursorEl.style.top=(rect.top-stageRect.top+y)+'px';cursorEl.hidden=false;}
-function applyMetadata(data){metaEl.textContent='Son görüntü: '+data.created_at+(data.active_url?' • URL: '+data.active_url:'');if(data.mouse_x!=null&&data.mouse_y!=null&&data.screen_width&&data.screen_height){lastMouse=data;positionCursor();}else{lastMouse=null;cursorEl.hidden=true;}}
-async function fetchLastMetadata(updateImage){try{const resp=await fetch('/api/agent/'+encodeURIComponent(agentName)+'/last');if(!resp.ok){statusEl.textContent='Görüntü yoxdur';return;}const data=await resp.json();if(!data.ok){statusEl.textContent='Görüntü yoxdur';return;}if(updateImage&&data.filename){imgEl.src='/screens/'+data.filename+'?t='+Date.now();}applyMetadata(data);statusEl.textContent=isStreamMode?'Live stream aktiv':'Aktiv';}catch(e){statusEl.textContent='Bağlantı xətası';}}
-function startPollingMode(){isStreamMode=false;streamBtn.classList.remove('active');streamBtn.textContent='⚡ Live Stream';modeLabel.textContent='Normal polling: 0.5s interval ilə yenilənir';if(mouseTimer){clearInterval(mouseTimer);mouseTimer=null;}fetchLastMetadata(true);pollTimer=setInterval(()=>fetchLastMetadata(true),500);}
-function startStreamMode(){isStreamMode=true;streamBtn.classList.add('active');streamBtn.textContent='⏸ Normal Mode';modeLabel.textContent='Live Stream Mode: MJPEG axını aktivdir';if(pollTimer){clearInterval(pollTimer);pollTimer=null;}imgEl.src='/stream/'+encodeURIComponent(agentName)+'?t='+Date.now();statusEl.textContent='Live stream aktiv';fetchLastMetadata(false);mouseTimer=setInterval(()=>fetchLastMetadata(false),1000);}
-function toggleStreamMode(){if(isStreamMode){startPollingMode();}else{startStreamMode();}}
-function renderActivity(){const list=document.getElementById('activity-list'),toggle=document.getElementById('activity-toggle');if(!activityRows.length){list.innerHTML='<div class="subtitle">Bugün üçün aktivlik yoxdur</div>';return;}const rows=showAllActivity?activityRows:activityRows.slice(0,5);list.innerHTML=rows.map(a=>`<div class="activity-item"><div><b>${escapeHtml(a.process||'—')}</b><span>${escapeHtml(a.url||a.window||'—')}</span></div><div class="activity-time"><b>${escapeHtml(a.formatted_duration)}</b><span>${escapeHtml(a.first_seen)} - ${escapeHtml(a.last_seen)}</span></div></div>`).join('');toggle.hidden=activityRows.length<=5;toggle.textContent=showAllActivity?'Az göstər':'Hamısını göstər';}
-function escapeHtml(v){return String(v||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-async function fetchActivity(){try{const resp=await fetch('/api/agent/'+encodeURIComponent(agentName)+'/activity/today');const data=await resp.json();activityRows=data.activities||[];renderActivity();}catch(e){document.getElementById('activity-list').innerHTML='<div class="subtitle">Aktivlik yüklənmədi</div>';}}
-startPollingMode();fetchActivity();setInterval(fetchActivity,30000);imgEl.addEventListener('load',positionCursor);window.addEventListener('resize',positionCursor);streamBtn.addEventListener('click',toggleStreamMode);
-document.getElementById('activity-toggle').addEventListener('click',()=>{showAllActivity=!showAllActivity;renderActivity();});
-const focusBtn=document.getElementById('focus-btn');function setFocus(on){document.body.classList.toggle('focus-mode',on);focusBtn.textContent=on?'Normal view':'🖥 Focus Mode';setTimeout(positionCursor,50);}focusBtn.addEventListener('click',async()=>{const on=!document.body.classList.contains('focus-mode');setFocus(on);if(on&&document.fullscreenEnabled){try{await document.documentElement.requestFullscreen();}catch(e){}}else if(!on&&document.fullscreenElement){document.exitFullscreen();}});document.addEventListener('keydown',e=>{if(e.key==='Escape')setFocus(false);});document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)setFocus(false);});
-const modal=document.getElementById('modal'),modalImg=document.getElementById('modal-img'),modalClose=document.getElementById('modal-close');imgEl.addEventListener('click',()=>{if(document.body.classList.contains('focus-mode'))return;if(!imgEl.src)return;modalImg.src=imgEl.src;modal.style.display='flex';});modalClose.addEventListener('click',()=>modal.style.display='none');modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+var agentName={{ agent_name|tojson }};
+var imgEl=document.getElementById('live-img');
+var emptyEl=document.getElementById('live-empty');
+var metaEl=document.getElementById('live-meta');
+var statusEl=document.getElementById('live-status');
+var cursorEl=document.getElementById('mouse-cursor');
+var stageEl=document.getElementById('live-stage');
+var streamBtn=document.getElementById('stream-btn');
+var modeLabel=document.getElementById('live-mode-label');
+var lastMouse=null;
+var showAllActivity=false;
+var activityRows=[];
+var isStreamMode=false;
+var pollTimer=null;
+var mouseTimer=null;
+
+function setStatus(text,active){statusEl.innerHTML='<i class="status-dot"></i>'+text;statusEl.classList.toggle('active',!!active);}
+function showEmpty(title,description){imgEl.classList.add('hidden');emptyEl.classList.remove('hidden');emptyEl.querySelector('b').textContent=title;emptyEl.querySelector('span').textContent=description;cursorEl.hidden=true;}
+function showImage(){emptyEl.classList.add('hidden');imgEl.classList.remove('hidden');}
+function positionCursor(){
+  if(!lastMouse||!imgEl.naturalWidth||imgEl.classList.contains('hidden')){cursorEl.hidden=true;return;}
+  var rect=imgEl.getBoundingClientRect();
+  var stageRect=stageEl.getBoundingClientRect();
+  var imgRatio=imgEl.naturalWidth/imgEl.naturalHeight;
+  var boxRatio=rect.width/rect.height;
+  var width=rect.width,height=rect.height,offsetX=0,offsetY=0;
+  if(boxRatio>imgRatio){width=height*imgRatio;offsetX=(rect.width-width)/2;}else{height=width/imgRatio;offsetY=(rect.height-height)/2;}
+  var x=offsetX+(lastMouse.mouse_x/lastMouse.screen_width)*width;
+  var y=offsetY+(lastMouse.mouse_y/lastMouse.screen_height)*height;
+  cursorEl.style.left=(rect.left-stageRect.left+x)+'px';
+  cursorEl.style.top=(rect.top-stageRect.top+y)+'px';
+  cursorEl.hidden=false;
+}
+function applyMetadata(data){
+  metaEl.textContent='Son görüntü: '+data.created_at+(data.active_url?' · '+data.active_url:'');
+  if(data.mouse_x!==null&&data.mouse_x!==undefined&&data.mouse_y!==null&&data.mouse_y!==undefined&&data.screen_width&&data.screen_height){lastMouse=data;positionCursor();}
+  else{lastMouse=null;cursorEl.hidden=true;}
+}
+function fetchLastMetadata(updateImage){
+  fetch('/api/agent/'+encodeURIComponent(agentName)+'/last')
+    .then(function(response){if(!response.ok) throw new Error('no-image');return response.json();})
+    .then(function(data){
+      if(!data.ok) throw new Error('no-image');
+      if(updateImage&&data.filename){
+        imgEl.onload=function(){showImage();positionCursor();};
+        imgEl.onerror=function(){showEmpty('Görüntü açıla bilmədi','Agent yenidən görüntü göndərdikdə avtomatik bərpa olunacaq.');};
+        imgEl.src='/screens/'+encodeURIComponent(data.filename)+'?t='+Date.now();
+      }
+      applyMetadata(data);
+      setStatus(isStreamMode?'Canlı axın aktivdir':'Agent aktivdir',true);
+    })
+    .catch(function(){setStatus('Görüntü yoxdur',false);showEmpty('Görüntü yoxdur','Agent offline ola bilər və ya hələ ekran görüntüsü göndərməyib.');});
+}
+function startPollingMode(){
+  isStreamMode=false;
+  streamBtn.classList.remove('active');
+  streamBtn.innerHTML='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5v14l11-7z"/></svg>Canlı axın';
+  modeLabel.textContent='Görüntü hər 0,5 saniyədə yenilənir';
+  if(mouseTimer){clearInterval(mouseTimer);mouseTimer=null;}
+  if(pollTimer){clearInterval(pollTimer);}
+  fetchLastMetadata(true);
+  pollTimer=setInterval(function(){fetchLastMetadata(true);},500);
+}
+function startStreamMode(){
+  isStreamMode=true;
+  streamBtn.classList.add('active');
+  streamBtn.innerHTML='<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Normal rejim';
+  modeLabel.textContent='Davamlı canlı axın aktivdir';
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  imgEl.onload=function(){showImage();positionCursor();};
+  imgEl.onerror=function(){showEmpty('Canlı axın açılmadı','Normal rejimə qayıdıb yenidən yoxlayın.');setStatus('Axın xətası',false);};
+  imgEl.src='/stream/'+encodeURIComponent(agentName)+'?t='+Date.now();
+  showImage();
+  setStatus('Canlı axın aktivdir',true);
+  fetchLastMetadata(false);
+  mouseTimer=setInterval(function(){fetchLastMetadata(false);},1000);
+}
+function toggleStreamMode(){if(isStreamMode)startPollingMode();else startStreamMode();}
+function escapeHtml(value){return String(value||'').replace(/[&<>\"]/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[character];});}
+function renderActivity(){
+  var list=document.getElementById('activity-list');
+  var toggle=document.getElementById('activity-toggle');
+  if(!activityRows.length){list.innerHTML='<div class="activity-empty">Bu gün üçün aktivlik qeydə alınmayıb.</div>';toggle.hidden=true;return;}
+  var rows=showAllActivity?activityRows:activityRows.slice(0,5);
+  list.innerHTML=rows.map(function(item){return '<div class="activity-item"><div><b>'+escapeHtml(item.process||'—')+'</b><span>'+escapeHtml(item.url||item.window||'—')+'</span></div><div class="activity-time"><b>'+escapeHtml(item.formatted_duration)+'</b><span>'+escapeHtml(item.first_seen)+' - '+escapeHtml(item.last_seen)+'</span></div></div>';}).join('');
+  toggle.hidden=activityRows.length<=5;
+  toggle.textContent=showAllActivity?'Az göstər':'Hamısını göstər';
+}
+function fetchActivity(){
+  fetch('/api/agent/'+encodeURIComponent(agentName)+'/activity/today')
+    .then(function(response){return response.json();})
+    .then(function(data){activityRows=data.activities||[];renderActivity();})
+    .catch(function(){document.getElementById('activity-list').innerHTML='<div class="activity-empty">Aktivlik məlumatları yüklənmədi.</div>';});
+}
+
+startPollingMode();
+fetchActivity();
+setInterval(fetchActivity,30000);
+imgEl.addEventListener('load',positionCursor);
+window.addEventListener('resize',positionCursor);
+streamBtn.addEventListener('click',toggleStreamMode);
+document.getElementById('activity-toggle').addEventListener('click',function(){showAllActivity=!showAllActivity;renderActivity();});
+
+var focusBtn=document.getElementById('focus-btn');
+function setFocus(enabled){
+  document.body.classList.toggle('focus-mode',enabled);
+  focusBtn.innerHTML=enabled?'Normal görünüş':'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>Tam ekran';
+  setTimeout(positionCursor,50);
+}
+focusBtn.addEventListener('click',function(){
+  var enabled=!document.body.classList.contains('focus-mode');
+  setFocus(enabled);
+  if(enabled&&document.fullscreenEnabled){document.documentElement.requestFullscreen().catch(function(){});}
+  else if(!enabled&&document.fullscreenElement){document.exitFullscreen();}
+});
+document.addEventListener('keydown',function(event){if(event.key==='Escape')setFocus(false);});
+document.addEventListener('fullscreenchange',function(){if(!document.fullscreenElement)setFocus(false);});
+
+var modal=document.getElementById('modal');
+var modalImg=document.getElementById('modal-img');
+imgEl.addEventListener('click',function(){if(document.body.classList.contains('focus-mode')||imgEl.classList.contains('hidden'))return;modalImg.src=imgEl.src;modal.style.display='flex';});
+document.getElementById('modal-close').addEventListener('click',function(){modal.style.display='none';});
+modal.addEventListener('click',function(event){if(event.target===modal)modal.style.display='none';});
 </script>
 </body>
 </html>
