@@ -16,9 +16,18 @@
   var longPressTimer=null;
   var lastTapAt=0;
   var lastTwoFingerY=null;
+  var autoFocusedForSession=false;
 
   function remoteIsActive(){
     return document.body.classList.contains('remote-control-active');
+  }
+
+  function safeFocus(element){
+    try{
+      element.focus({preventScroll:true});
+    }catch(_error){
+      element.focus();
+    }
   }
 
   function pointInsideStage(clientX,clientY){
@@ -74,7 +83,7 @@
   function keyEvent(key,options){
     if(!remoteIsActive())return;
     options=options||{};
-    stage.focus({preventScroll:true});
+    safeFocus(stage);
     stage.dispatchEvent(new KeyboardEvent('keydown',{
       key:key,
       bubbles:true,
@@ -99,11 +108,16 @@
 
   function syncMobileState(){
     if(!remoteIsActive()){
+      autoFocusedForSession=false;
       hideCursor();
       keyboardInput.blur();
       return;
     }
-    window.setTimeout(enterMobileFocus,80);
+
+    if(!autoFocusedForSession){
+      autoFocusedForSession=true;
+      window.setTimeout(enterMobileFocus,80);
+    }
   }
 
   stage.addEventListener('pointermove',function(event){
@@ -114,7 +128,6 @@
   stage.addEventListener('touchstart',function(event){
     if(!remoteIsActive())return;
     event.preventDefault();
-
     clearTimers();
 
     if(event.touches.length===2){
@@ -132,8 +145,7 @@
       lastX:touch.clientX,
       lastY:touch.clientY,
       moved:false,
-      longPressed:false,
-      startedAt:Date.now()
+      longPressed:false
     };
 
     mouseEvent('mousemove',touch.clientX,touch.clientY,0);
@@ -218,8 +230,8 @@
     event.preventDefault();
     if(!remoteIsActive())return;
     keyboardInput.value='';
-    keyboardInput.focus({preventScroll:true});
-    window.setTimeout(function(){keyboardInput.focus({preventScroll:true});},60);
+    safeFocus(keyboardInput);
+    window.setTimeout(function(){safeFocus(keyboardInput);},60);
   });
 
   keyboardInput.addEventListener('beforeinput',function(event){
@@ -277,9 +289,7 @@
   observer.observe(document.body,{attributes:true,attributeFilter:['class']});
 
   window.addEventListener('orientationchange',function(){
-    window.setTimeout(function(){
-      if(remoteIsActive())enterMobileFocus();
-    },250);
+    keyboardInput.blur();
   });
 
   document.addEventListener('visibilitychange',function(){
