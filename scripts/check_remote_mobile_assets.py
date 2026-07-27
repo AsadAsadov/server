@@ -17,6 +17,7 @@ def main():
         [
             "remote-control-mobile.css",
             "mobile-keyboard-button",
+            "mobile-exit-button",
             "mobile-keyboard-input",
             "remote-control-mobile.js",
         ],
@@ -28,6 +29,8 @@ def main():
             ".mobile-remote-toolbar",
             ".mouse-cursor",
             ".remote-active-banner",
+            "body.remote-page.focus-mode .mobile-remote-toolbar",
+            "focus-mode:not(.remote-control-active) #mobile-keyboard-button",
         ],
     )
     require(
@@ -40,6 +43,10 @@ def main():
             "KeyboardEvent",
             "MouseEvent",
             "autoFocusedForSession",
+            "TRACKPAD_SPEED",
+            "virtualCursor",
+            "moveVirtualCursor",
+            "keepKeyboardOpen",
         ],
     )
     print("REMOTE MOBILE ASSETS: OK")
