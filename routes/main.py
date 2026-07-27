@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from flask import Blueprint, redirect, render_template, request, url_for
 from auth import login_required
 from database import get_db
+from services.ram_screens import get_screenshot
 from utils.security import csrf_protect, safe_pc_name
 from utils.timezone import format_baku_time
 
@@ -41,6 +42,11 @@ def dashboard():
             'SELECT filename FROM screenshots WHERE agent_name = ? ORDER BY created_at DESC LIMIT 1',
             (name,),
         ).fetchone()
+        persistent_last_filename = f'{name}_last.jpg'
+        if get_screenshot(persistent_last_filename) is not None:
+            last_filename = persistent_last_filename
+        else:
+            last_filename = last_shot['filename'] if last_shot else None
         agents.append({
             'name': name,
             'last_seen': last_seen,
@@ -53,7 +59,7 @@ def dashboard():
             'active_process': a['active_process'],
             'active_url': a['active_url'],
             'active_url_domain': _url_domain(a['active_url']),
-            'last_filename': last_shot['filename'] if last_shot else None,
+            'last_filename': last_filename,
         })
     conn.close()
     return render_template('dashboard.html', agents=agents)
