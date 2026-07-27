@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+.venv-*/
+
+# Runtime data
+logs/
+*.log
+monitor.db
+monitor.db-*
+screens/
+
+# Secrets and local agent configuration
+.env
+agent_config.json
+
+# Build output
+build/
+dist/
+*.manifest
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
