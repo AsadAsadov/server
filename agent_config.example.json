@@ -1,6 +1,6 @@
 {
   "server_url": "https://monitor.besthome.az/upload",
-  "upload_token": "SERVERDEKI_YENI_UPLOAD_TOKEN",
+  "upload_token": "SERVERDEKI_SCREENSHOT_UPLOAD_TOKEN",
   "pc_name": "",
   "screen_interval_seconds": 0.5,
   "request_timeout_seconds": 10,
@@ -10,6 +10,7 @@
   "max_retry_seconds": 30,
   "verify_tls": true,
   "remote_control_enabled": true,
+  "remote_control_token": "SERVERDEKI_REMOTE_AGENT_TOKEN",
   "remote_control_mode": "ask",
   "remote_poll_interval_seconds": 0.15
 }
