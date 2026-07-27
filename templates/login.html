@@ -1,1 +1,50 @@
-<!doctype html><html><head><meta charset="utf-8"><title>BestHome Monitor - Login</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head><body class="login-page"><div class="login-card"><div class="logo"><div class="logo-badge">BH</div><div><h1>BestHome Monitor</h1><p>Admin giriş paneli</p></div></div>{% if error %}<div class="error">{{ error }}</div>{% endif %}<form method="post"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><label>Email</label><input type="email" name="email" value="{{ request.form.email or '' }}" required><label>Şifrə</label><input type="password" name="password" required><button type="submit">Giriş</button></form></div></body></html>
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <title>Giriş - BestHome Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+<main class="login-shell">
+  <section class="login-brand-panel">
+    <div class="login-brand">
+      <span class="logo-badge">BH</span>
+      <div><h2>BestHome Monitor</h2><p>Daxili idarəetmə sistemi</p></div>
+    </div>
+
+    <div class="login-copy">
+      <p class="eyebrow">Canlı monitorinq</p>
+      <h1>Kompüterlərə nəzarət bir paneldə.</h1>
+      <p>Agentlərin bağlantı statusunu, ekran görüntüsünü və aktiv proseslərini təhlükəsiz şəkildə izləyin.</p>
+      <div class="login-features">
+        <div class="login-feature"><i>1</i> Canlı ekran və online status</div>
+        <div class="login-feature"><i>2</i> Proses və aktivlik tarixçəsi</div>
+        <div class="login-feature"><i>3</i> İşçilərin vahid idarəetməsi</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="login-form-panel">
+    <div class="login-card">
+      <p class="eyebrow">Admin paneli</p>
+      <h2>Xoş gəlmisiniz</h2>
+      <p>Panelə davam etmək üçün hesab məlumatlarını daxil edin.</p>
+
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label for="email">Email</label>
+        <input id="email" type="email" name="email" value="{{ request.form.email or '' }}" autocomplete="username" required>
+        <label for="password">Şifrə</label>
+        <input id="password" type="password" name="password" autocomplete="current-password" required>
+        <button type="submit" class="login-submit">Panelə daxil ol</button>
+      </form>
+      <div class="login-footnote">Yalnız səlahiyyətli istifadəçilər üçün</div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
