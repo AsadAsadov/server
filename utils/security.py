@@ -49,12 +49,23 @@ def csrf_protect(f):
     return wrapper
 
 
+def _compare_token(provided: str, expected: str) -> bool:
+    return bool(provided and expected) and secrets.compare_digest(provided, expected)
+
+
 def check_upload_token(expected: str) -> bool:
-    if not expected:
-        return False
     provided = (
         request.headers.get('X-Upload-Token')
         or request.form.get('upload_token')
         or request.args.get('token')
     )
-    return bool(provided) and secrets.compare_digest(provided, expected)
+    return _compare_token(provided, expected)
+
+
+def check_remote_agent_token(expected: str) -> bool:
+    provided = (
+        request.headers.get('X-Remote-Token')
+        or request.form.get('remote_token')
+        or request.args.get('remote_token')
+    )
+    return _compare_token(provided, expected)
