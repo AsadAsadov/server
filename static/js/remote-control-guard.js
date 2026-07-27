@@ -4,8 +4,12 @@
   document.addEventListener('dblclick',function(event){
     var stage=event.target.closest&&event.target.closest('#remote-stage');
     if(!stage)return;
+
+    /* Prevent browser zoom, but keep the remote double-click handler active. */
     event.preventDefault();
-    event.stopImmediatePropagation();
+    if(!document.body.classList.contains('remote-control-active')){
+      event.stopImmediatePropagation();
+    }
   },true);
 
   var config=window.BESTHOME_REMOTE||{};
