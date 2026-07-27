@@ -1,1 +1,69 @@
-<!doctype html><html><head><meta charset="utf-8"><title>İşçi paneli - BestHome Monitor</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head><body><header><a href="{{ url_for('main.dashboard') }}" class="back">← Dashboard</a><div style="font-size:13px;color:#9ca3af;">İşçi paneli</div></header><main><h1>Agentlərə işçi bağlama</h1><table><thead><tr><th>#</th><th>Agent PC</th><th>İşçi adı</th><th>Şöbə</th><th>Vəzifə</th><th>Qeyd</th><th></th></tr></thead><tbody>{% for r in rows %}<tr><form method="POST"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><td>{{ loop.index }}</td><td><input type="text" value="{{ r.agent_name }}" readonly><input type="hidden" name="agent_name" value="{{ r.agent_name }}"></td><td><input name="full_name" value="{{ r.full_name }}"></td><td><input name="department" value="{{ r.department }}"></td><td><input name="role" value="{{ r.role }}"></td><td><textarea name="note">{{ r.note }}</textarea></td><td><button type="submit">Yadda saxla</button></td></form></tr>{% endfor %}</tbody></table></main></body></html>
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <title>İşçilər - BestHome Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="app-header">
+  <div class="header-inner">
+    <a href="{{ url_for('main.dashboard') }}" class="back">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>
+      Dashboard
+    </a>
+    <a class="brand" href="{{ url_for('main.dashboard') }}">
+      <span class="badge">BH</span>
+      <span><span class="brand-title">BestHome Monitor</span><span class="brand-subtitle">İşçi idarəetməsi</span></span>
+    </a>
+  </div>
+</header>
+
+<main class="management-main">
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">İşçi idarəetməsi</p>
+      <h1>Agent məlumatları</h1>
+      <p class="page-description">Hər kompüterə işçi adı, şöbə, vəzifə və daxili qeyd əlavə edin.</p>
+    </div>
+    <div class="page-count">{{ rows|length }} agent</div>
+  </section>
+
+  <section class="employee-list">
+    {% for r in rows %}
+    <article class="employee-card">
+      <form method="POST" class="employee-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="agent_name" value="{{ r.agent_name }}">
+
+        <div class="field">
+          <label>Agent kompüteri</label>
+          <input type="text" value="{{ r.agent_name }}" readonly>
+        </div>
+        <div class="field">
+          <label>İşçi adı</label>
+          <input name="full_name" value="{{ r.full_name }}" placeholder="Məsələn, Əli Məmmədov">
+        </div>
+        <div class="field">
+          <label>Şöbə</label>
+          <input name="department" value="{{ r.department }}" placeholder="Məsələn, Satış">
+        </div>
+        <div class="field">
+          <label>Vəzifə</label>
+          <input name="role" value="{{ r.role }}" placeholder="Məsələn, Menecer">
+        </div>
+        <div class="field">
+          <label>Qeyd</label>
+          <textarea name="note" placeholder="Daxili qeyd...">{{ r.note }}</textarea>
+        </div>
+        <button type="submit" class="employee-save">Yadda saxla</button>
+      </form>
+    </article>
+    {% else %}
+    <div class="empty-state">Hələ heç bir agent qoşulmayıb.</div>
+    {% endfor %}
+  </section>
+</main>
+</body>
+</html>
