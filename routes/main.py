@@ -60,6 +60,8 @@ def dashboard():
             'active_url': a['active_url'],
             'active_url_domain': _url_domain(a['active_url']),
             'last_filename': last_filename,
+            'agent_version': a['agent_version'],
+            'remote_capable': bool(a['remote_capable']),
         })
     conn.close()
     return render_template('dashboard.html', agents=agents)
@@ -128,7 +130,7 @@ def agent_detail(agent_name):
     last_seen = datetime.fromisoformat(a['last_seen'])
     is_online = last_seen >= datetime.utcnow() - timedelta(seconds=10)
     return render_template(
-        'agent_detail.html',
+        'agent_remote.html',
         agent_name=agent_name,
         full_name=emp['full_name'] if emp and emp['full_name'] else agent_name,
         department=emp['department'] if emp else '',
@@ -136,6 +138,8 @@ def agent_detail(agent_name):
         note=emp['note'] if emp else '',
         last_seen_str=format_baku_time(last_seen),
         is_online=is_online,
+        remote_capable=bool(a['remote_capable']),
+        agent_version=a['agent_version'] or '',
         active_window=a['active_window'],
         active_process=a['active_process'],
         active_url=a['active_url'],

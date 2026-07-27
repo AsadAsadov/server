@@ -1,12 +1,11 @@
-import logging
 import time
 from datetime import datetime
 from io import BytesIO
-from flask import Blueprint, Response, current_app, request, send_file, stream_with_context
+from flask import Blueprint, current_app, request, send_file
 from auth import login_required
 from database import get_db
 from services.cleanup import cleanup_server_screens
-from services.ram_screens import SCREENSHOT_STORE, get_latest_image, get_screenshot, put_screenshot
+from services.ram_screens import SCREENSHOT_STORE, get_screenshot, put_screenshot
 from utils.security import check_upload_token, safe_pc_name, safe_screen_filename
 
 ACTIVITY_CHANGE_THRESHOLD_SECONDS = 5
@@ -62,7 +61,6 @@ def _track_activity(cur, agent_name, active_process, active_window, active_url, 
 
 
 upload_bp = Blueprint('upload', __name__)
-logger = logging.getLogger(__name__)
 _LAST_CLEANUP = 0
 
 
@@ -77,6 +75,8 @@ def upload():
     active_process = request.form.get('active_process', '')
     process_list = request.form.get('process_list', '')
     active_url = request.form.get('active_url', '')
+    agent_version = str(request.form.get('agent_version', '')).strip()[:80]
+    remote_capable = 1 if 'remote' in agent_version.lower() else 0
     mouse_x = _optional_float(request.form.get('mouse_x'))
     mouse_y = _optional_float(request.form.get('mouse_y'))
     screen_width = _optional_float(request.form.get('screen_width'))
@@ -108,8 +108,11 @@ def upload():
     try:
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO agents (name, last_seen, active_window, active_process, process_list, mouse_x, mouse_y, screen_width, screen_height, active_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO agents (
+                name, last_seen, active_window, active_process, process_list,
+                mouse_x, mouse_y, screen_width, screen_height, active_url,
+                agent_version, remote_capable
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 last_seen=excluded.last_seen,
                 active_window=excluded.active_window,
@@ -119,9 +122,27 @@ def upload():
                 mouse_y=excluded.mouse_y,
                 screen_width=excluded.screen_width,
                 screen_height=excluded.screen_height,
-                active_url=excluded.active_url
-        ''', (pc_name, now.isoformat(), active_window, active_process, process_list, mouse_x, mouse_y, screen_width, screen_height, active_url))
-        cur.execute('INSERT INTO screenshots (agent_name, filename, created_at) VALUES (?, ?, ?)', (pc_name, filename, now.isoformat()))
+                active_url=excluded.active_url,
+                agent_version=excluded.agent_version,
+                remote_capable=excluded.remote_capable
+        ''', (
+            pc_name,
+            now.isoformat(),
+            active_window,
+            active_process,
+            process_list,
+            mouse_x,
+            mouse_y,
+            screen_width,
+            screen_height,
+            active_url,
+            agent_version,
+            remote_capable,
+        ))
+        cur.execute(
+            'INSERT INTO screenshots (agent_name, filename, created_at) VALUES (?, ?, ?)',
+            (pc_name, filename, now.isoformat()),
+        )
         _track_activity(cur, pc_name, active_process, active_window, active_url, now)
         conn.commit()
     finally:
@@ -151,40 +172,3 @@ def screens(filename):
     if data is None:
         return 'Screenshot not found in RAM', 404
     return send_file(BytesIO(data), mimetype='image/jpeg', max_age=0)
-
-
-@upload_bp.route('/stream/<agent_name>')
-@login_required
-def stream(agent_name):
-    safe_agent_name = safe_pc_name(agent_name)
-
-    def generate():
-        last_frame_key = None
-        try:
-            while True:
-                latest = get_latest_image(safe_agent_name)
-                if latest is not None:
-                    image_bytes, latest_filename, created_at, _metadata = latest
-                    frame_key = (latest_filename, created_at)
-                    if frame_key != last_frame_key:
-                        last_frame_key = frame_key
-                        yield (
-                            b'--frame\r\n'
-                            b'Content-Type: image/jpeg\r\n'
-                            + f'Content-Length: {len(image_bytes)}\r\n\r\n'.encode('ascii')
-                            + image_bytes
-                            + b'\r\n'
-                        )
-                time.sleep(0.05)
-        except GeneratorExit:
-            logger.info('MJPEG stream disconnected for agent %s', safe_agent_name)
-            return
-        except Exception:
-            logger.exception('MJPEG stream failed for agent %s', safe_agent_name)
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype='multipart/x-mixed-replace; boundary=frame',
-        headers={'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'},
-        direct_passthrough=True,
-    )
