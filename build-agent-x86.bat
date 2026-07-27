@@ -29,9 +29,10 @@ python -m PyInstaller ^
   --onefile ^
   --windowed ^
   --name BestHomeMonitor-x86 ^
+  --hidden-import tkinter ^
   --collect-submodules pywinauto ^
   --collect-submodules comtypes ^
-  cms.py
+  cms_remote.py
 if errorlevel 1 exit /b 1
 
 copy /Y agent_config.example.json dist\agent_config.example.json >nul
