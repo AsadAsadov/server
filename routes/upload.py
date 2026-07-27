@@ -75,6 +75,8 @@ def upload():
     active_process = request.form.get('active_process', '')
     process_list = request.form.get('process_list', '')
     active_url = request.form.get('active_url', '')
+    agent_version = str(request.form.get('agent_version', '')).strip()[:80]
+    remote_capable = 1 if 'remote' in agent_version.lower() else 0
     mouse_x = _optional_float(request.form.get('mouse_x'))
     mouse_y = _optional_float(request.form.get('mouse_y'))
     screen_width = _optional_float(request.form.get('screen_width'))
@@ -106,8 +108,11 @@ def upload():
     try:
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO agents (name, last_seen, active_window, active_process, process_list, mouse_x, mouse_y, screen_width, screen_height, active_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO agents (
+                name, last_seen, active_window, active_process, process_list,
+                mouse_x, mouse_y, screen_width, screen_height, active_url,
+                agent_version, remote_capable
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 last_seen=excluded.last_seen,
                 active_window=excluded.active_window,
@@ -117,9 +122,27 @@ def upload():
                 mouse_y=excluded.mouse_y,
                 screen_width=excluded.screen_width,
                 screen_height=excluded.screen_height,
-                active_url=excluded.active_url
-        ''', (pc_name, now.isoformat(), active_window, active_process, process_list, mouse_x, mouse_y, screen_width, screen_height, active_url))
-        cur.execute('INSERT INTO screenshots (agent_name, filename, created_at) VALUES (?, ?, ?)', (pc_name, filename, now.isoformat()))
+                active_url=excluded.active_url,
+                agent_version=excluded.agent_version,
+                remote_capable=excluded.remote_capable
+        ''', (
+            pc_name,
+            now.isoformat(),
+            active_window,
+            active_process,
+            process_list,
+            mouse_x,
+            mouse_y,
+            screen_width,
+            screen_height,
+            active_url,
+            agent_version,
+            remote_capable,
+        ))
+        cur.execute(
+            'INSERT INTO screenshots (agent_name, filename, created_at) VALUES (?, ?, ?)',
+            (pc_name, filename, now.isoformat()),
+        )
         _track_activity(cur, pc_name, active_process, active_window, active_url, now)
         conn.commit()
     finally:
