@@ -13,15 +13,22 @@ def prepare_agent():
     conn = get_db()
     try:
         conn.execute('''
-            INSERT INTO agents (name, last_seen, active_window, active_process, process_list)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(name) DO UPDATE SET last_seen = excluded.last_seen
+            INSERT INTO agents (
+                name, last_seen, active_window, active_process, process_list,
+                agent_version, remote_capable
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                last_seen = excluded.last_seen,
+                agent_version = excluded.agent_version,
+                remote_capable = excluded.remote_capable
         ''', (
             AGENT_NAME,
             datetime.utcnow().isoformat(),
             'Remote test window',
             'test.exe',
             'test.exe',
+            '2.1.0-remote-test',
+            1,
         ))
         conn.commit()
     finally:
@@ -42,8 +49,8 @@ def cleanup():
 
 
 def main():
-    if not Config.UPLOAD_TOKEN:
-        raise RuntimeError('UPLOAD_TOKEN test mühitində boşdur')
+    if not Config.REMOTE_AGENT_TOKEN:
+        raise RuntimeError('REMOTE_AGENT_TOKEN test mühitində boşdur')
 
     prepare_agent()
     try:
@@ -66,7 +73,7 @@ def main():
             response = client.post(
                 '/api/agent/remote/poll',
                 json={'pc_name': AGENT_NAME},
-                headers={'X-Upload-Token': Config.UPLOAD_TOKEN},
+                headers={'X-Remote-Token': Config.REMOTE_AGENT_TOKEN},
             )
             assert response.status_code == 200
             assert response.get_json()['session']['status'] == 'pending'
@@ -80,7 +87,7 @@ def main():
                     'state': 'accepted',
                     'message': 'test accepted',
                 },
-                headers={'X-Upload-Token': Config.UPLOAD_TOKEN},
+                headers={'X-Remote-Token': Config.REMOTE_AGENT_TOKEN},
             )
             assert response.status_code == 200
             assert response.get_json()['session']['status'] == 'active'
@@ -103,7 +110,7 @@ def main():
             response = client.post(
                 '/api/agent/remote/poll',
                 json={'pc_name': AGENT_NAME},
-                headers={'X-Upload-Token': Config.UPLOAD_TOKEN},
+                headers={'X-Remote-Token': Config.REMOTE_AGENT_TOKEN},
             )
             payload = response.get_json()
             assert response.status_code == 200
