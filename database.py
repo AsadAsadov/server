@@ -34,6 +34,8 @@ def init_db():
     _ensure_column(cur, 'agents', 'screen_width', 'REAL')
     _ensure_column(cur, 'agents', 'screen_height', 'REAL')
     _ensure_column(cur, 'agents', 'active_url', 'TEXT')
+    _ensure_column(cur, 'agents', 'agent_version', 'TEXT')
+    _ensure_column(cur, 'agents', 'remote_capable', 'INTEGER NOT NULL DEFAULT 0')
     cur.execute('''
         CREATE TABLE IF NOT EXISTS screenshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
