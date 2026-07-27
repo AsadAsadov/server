@@ -1,0 +1,12 @@
+{
+  "server_url": "https://monitor.besthome.az/upload",
+  "upload_token": "SERVERDEKI_YENI_UPLOAD_TOKEN",
+  "pc_name": "",
+  "screen_interval_seconds": 0.5,
+  "request_timeout_seconds": 10,
+  "jpeg_quality": 40,
+  "process_refresh_seconds": 15,
+  "browser_url_refresh_seconds": 5,
+  "max_retry_seconds": 30,
+  "verify_tls": true
+}
