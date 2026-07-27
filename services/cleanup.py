@@ -11,17 +11,25 @@ def cleanup_server_screens(
     screenshot_store: dict[str, bytes] | None = None,
     max_per_agent: int | None = None,
 ) -> None:
-    """Remove old screenshot metadata and matching RAM-only image bytes."""
+    """Remove old screenshot metadata and matching RAM-only gallery images."""
     limit = datetime.utcnow() - timedelta(minutes=keep_minutes)
     filenames_to_remove: set[str] = set()
     conn = get_db()
     try:
-        rows = conn.execute('SELECT filename FROM screenshots WHERE created_at < ?', (limit.isoformat(),)).fetchall()
+        rows = conn.execute(
+            'SELECT filename FROM screenshots WHERE created_at < ?',
+            (limit.isoformat(),),
+        ).fetchall()
         filenames_to_remove.update(row['filename'] for row in rows)
-        conn.execute('DELETE FROM screenshots WHERE created_at < ?', (limit.isoformat(),))
+        conn.execute(
+            'DELETE FROM screenshots WHERE created_at < ?',
+            (limit.isoformat(),),
+        )
 
         if max_per_agent is not None and max_per_agent > 0:
-            agents = conn.execute('SELECT DISTINCT agent_name FROM screenshots').fetchall()
+            agents = conn.execute(
+                'SELECT DISTINCT agent_name FROM screenshots'
+            ).fetchall()
             for agent in agents:
                 overflow = conn.execute('''
                     SELECT filename FROM screenshots
@@ -38,11 +46,19 @@ def cleanup_server_screens(
                         ORDER BY created_at DESC
                         LIMIT -1 OFFSET ?
                     )
-                ''', (agent['agent_name'], agent['agent_name'], max_per_agent))
+                ''', (
+                    agent['agent_name'],
+                    agent['agent_name'],
+                    max_per_agent,
+                ))
 
         if screenshot_store is not None:
-            filenames_to_remove.update(cleanup_ram_store(keep_minutes, max_per_agent))
-            stale_rows = conn.execute('SELECT filename FROM screenshots').fetchall()
+            filenames_to_remove.update(
+                cleanup_ram_store(keep_minutes, max_per_agent)
+            )
+            stale_rows = conn.execute(
+                'SELECT filename FROM screenshots'
+            ).fetchall()
             for row in stale_rows:
                 if row['filename'] not in screenshot_store:
                     filenames_to_remove.add(row['filename'])
@@ -51,8 +67,12 @@ def cleanup_server_screens(
                     'DELETE FROM screenshots WHERE filename = ?',
                     [(filename,) for filename in filenames_to_remove],
                 )
-            for filename in filenames_to_remove:
-                logger.info('Old screenshot metadata cleaned: %s', filename)
+
         conn.commit()
+        if filenames_to_remove:
+            logger.info(
+                'Screenshot cleanup completed: %s old gallery frame(s) removed',
+                len(filenames_to_remove),
+            )
     finally:
         conn.close()

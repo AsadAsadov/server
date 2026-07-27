@@ -60,6 +60,7 @@ def _track_activity(cur, agent_name, active_process, active_window, active_url, 
         VALUES (?, ?, ?, ?, ?, NULL, NULL)
     ''', (agent_name, active_process, active_window, active_url, now.isoformat()))
 
+
 upload_bp = Blueprint('upload', __name__)
 logger = logging.getLogger(__name__)
 _LAST_CLEANUP = 0
@@ -85,11 +86,14 @@ def upload():
         return 'No file', 400
 
     now = datetime.utcnow()
-    timestamp = now.strftime('%Y-%m-%d_%H-%M-%S')
+    timestamp = now.strftime('%Y-%m-%d_%H-%M-%S-%f')
     filename = safe_screen_filename(f'{pc_name}_{timestamp}.jpg')
     last_filename = safe_screen_filename(f'{pc_name}_last.jpg')
 
     data = file.read()
+    if not data:
+        return 'Empty file', 400
+
     mouse_metadata = {
         'mouse_x': mouse_x,
         'mouse_y': mouse_y,

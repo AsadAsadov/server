@@ -1,77 +1,101 @@
 <!doctype html>
-<html>
+<html lang="az">
 <head>
   <meta charset="utf-8">
-  <title>{{ agent_name }} - Son 5 dəqiqəlik qalereya</title>
+  <title>{{ agent_name }} - Qalereya</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <header>
-    <a class="back" href="{{ url_for('main.agent_detail', agent_name=agent_name) }}">← Agent səhifəsi</a>
-    <div style="font-size:13px;color:#9ca3af;">Son 5 dəqiqəlik qalereya</div>
-  </header>
-  <div id="gallery" class="gallery-grid"></div>
-  <div id="modal"><span id="modal-close">✕</span><img id="modal-img"></div>
-  <script>
-    const agent = {{ agent_name|tojson }};
-    let offset = 0;
-    const limit = 60;
-    let isLoading = false;
-    const gallery = document.getElementById("gallery");
+<header class="app-header">
+  <div class="header-inner">
+    <a class="back" href="{{ url_for('main.agent_detail', agent_name=agent_name) }}">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>
+      Agent səhifəsi
+    </a>
+    <a class="brand" href="{{ url_for('main.dashboard') }}">
+      <span class="badge">BH</span>
+      <span><span class="brand-title">BestHome Monitor</span><span class="brand-subtitle">Ekran qalereyası</span></span>
+    </a>
+  </div>
+</header>
 
-    async function loadMore() {
-      if (isLoading) return;
-      isLoading = true;
-      const res = await fetch(`/api/agent/${encodeURIComponent(agent)}/shots?offset=${offset}&limit=${limit}`);
-      const data = await res.json();
-      if (data.length === 0) {
-        window.removeEventListener("scroll", scrollHandler);
-        isLoading = false;
+<main class="gallery-main">
+  <section class="gallery-heading">
+    <div>
+      <p class="eyebrow">Son görüntülər</p>
+      <h1>{{ agent_name }}</h1>
+      <p class="page-description">Agentin son beş dəqiqə ərzində göndərdiyi ekran görüntüləri.</p>
+    </div>
+    <div id="gallery-count" class="page-count">Yüklənir...</div>
+  </section>
+
+  <div id="gallery-state" class="gallery-state">Görüntülər yüklənir...</div>
+  <section id="gallery" class="gallery-grid" hidden></section>
+</main>
+
+<div id="modal"><span id="modal-close">✕</span><img id="modal-img" alt="Ekran görüntüsü"></div>
+
+<script>
+var agent={{ agent_name|tojson }};
+var offset=0;
+var limit=60;
+var isLoading=false;
+var hasMore=true;
+var loadedCount=0;
+var gallery=document.getElementById('gallery');
+var state=document.getElementById('gallery-state');
+var countEl=document.getElementById('gallery-count');
+
+function setState(message){state.textContent=message;state.hidden=false;}
+function showGallery(){state.hidden=true;gallery.hidden=false;}
+function openModal(filename){modalImg.src='/screens/'+encodeURIComponent(filename);modal.style.display='flex';}
+function appendShot(item){
+  var card=document.createElement('article');
+  card.className='shot';
+  var image=document.createElement('img');
+  image.src='/screens/'+encodeURIComponent(item.filename);
+  image.alt=item.created_at;
+  image.addEventListener('error',function(){card.remove();loadedCount=Math.max(0,loadedCount-1);countEl.textContent=loadedCount+' görüntü';});
+  var meta=document.createElement('div');
+  meta.className='shot-meta';
+  meta.textContent=item.created_at;
+  card.appendChild(image);
+  card.appendChild(meta);
+  card.addEventListener('click',function(){openModal(item.filename);});
+  gallery.appendChild(card);
+}
+function loadMore(){
+  if(isLoading||!hasMore)return;
+  isLoading=true;
+  fetch('/api/agent/'+encodeURIComponent(agent)+'/shots?offset='+offset+'&limit='+limit)
+    .then(function(response){if(!response.ok)throw new Error('load-failed');return response.json();})
+    .then(function(data){
+      if(!data.length){
+        hasMore=false;
+        if(loadedCount===0)setState('Son beş dəqiqə üçün ekran görüntüsü yoxdur.');
+        window.removeEventListener('scroll',scrollHandler);
         return;
       }
-      data.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "shot";
-        const img = document.createElement("img");
-        img.src = "/screens/" + encodeURIComponent(item.filename);
-        img.alt = item.created_at;
-        img.addEventListener("error", () => div.remove());
-        const meta = document.createElement("div");
-        meta.textContent = item.created_at;
-        div.appendChild(img);
-        div.appendChild(meta);
-        div.addEventListener("click", () => openModal(item.filename));
-        gallery.appendChild(div);
-      });
-      offset += data.length;
-      isLoading = false;
-    }
+      showGallery();
+      data.forEach(appendShot);
+      offset+=data.length;
+      loadedCount+=data.length;
+      countEl.textContent=loadedCount+' görüntü';
+      if(data.length<limit){hasMore=false;window.removeEventListener('scroll',scrollHandler);}
+    })
+    .catch(function(){if(loadedCount===0)setState('Görüntülər yüklənmədi. Səhifəni yeniləyin.');})
+    .finally(function(){isLoading=false;});
+}
+function scrollHandler(){if(window.innerHeight+window.scrollY>=document.body.offsetHeight-240)loadMore();}
+window.addEventListener('scroll',scrollHandler);
+loadMore();
 
-    function scrollHandler() {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) loadMore();
-    }
-
-    window.addEventListener("scroll", scrollHandler);
-    loadMore();
-
-    const modal = document.getElementById("modal");
-    const modalImg = document.getElementById("modal-img");
-    const modalClose = document.getElementById("modal-close");
-
-    function openModal(filename) {
-      modalImg.src = "/screens/" + encodeURIComponent(filename);
-      modal.style.display = "flex";
-    }
-
-    modalImg.addEventListener("error", () => {
-      modal.style.display = "none";
-      modalImg.removeAttribute("src");
-    });
-    modalClose.addEventListener("click", () => modal.style.display = "none");
-    modal.addEventListener("click", e => {
-      if (e.target === modal) modal.style.display = "none";
-    });
-  </script>
+var modal=document.getElementById('modal');
+var modalImg=document.getElementById('modal-img');
+modalImg.addEventListener('error',function(){modal.style.display='none';modalImg.removeAttribute('src');});
+document.getElementById('modal-close').addEventListener('click',function(){modal.style.display='none';});
+modal.addEventListener('click',function(event){if(event.target===modal)modal.style.display='none';});
+</script>
 </body>
 </html>
