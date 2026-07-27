@@ -65,6 +65,7 @@ def check_upload_token(expected: str) -> bool:
 def check_remote_agent_token(expected: str) -> bool:
     provided = (
         request.headers.get('X-Remote-Token')
+        or request.headers.get('X-Upload-Token')
         or request.form.get('remote_token')
         or request.args.get('remote_token')
     )
