@@ -25,7 +25,7 @@
   </div>
 </header>
 
-<main class="remote-main" id="remote-main" data-agent-online="{{ '1' if is_online else '0' }}">
+<main class="remote-main" id="remote-main" data-agent-online="{{ '1' if is_online else '0' }}" data-remote-capable="{{ '1' if remote_capable else '0' }}">
   <section class="remote-summary focus-hide">
     <div class="remote-agent-block">
       <div class="agent-avatar">
@@ -41,6 +41,7 @@
     <div class="remote-info-grid">
       <div class="remote-info-item"><span>Son aktivlik</span><b>{{ last_seen_str }}</b></div>
       <div class="remote-info-item"><span>Aktiv proses</span><b>{{ active_process or '—' }}</b></div>
+      <div class="remote-info-item"><span>Agent versiyası</span><b>{{ agent_version or 'Köhnə agent' }}</b></div>
       <div class="remote-info-item"><span>Aktiv pəncərə</span><b title="{{ active_window or '' }}">{{ active_window or '—' }}</b></div>
       {% if active_url %}<div class="remote-info-item"><span>Aktiv URL</span><b title="{{ active_url }}">{{ active_url }}</b></div>{% endif %}
     </div>
@@ -51,7 +52,7 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
         Qalereya
       </a>
-      <button id="remote-start" type="button" class="remote-start" {% if not is_online %}disabled{% endif %}>
+      <button id="remote-start" type="button" class="remote-start" {% if not is_online or not remote_capable %}disabled{% endif %}>
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="8"/></svg>
         Uzaqdan idarə et
       </button>
@@ -126,6 +127,7 @@
 window.BESTHOME_REMOTE = {
   agentName: {{ agent_name|tojson }},
   online: {{ 'true' if is_online else 'false' }},
+  remoteCapable: {{ 'true' if remote_capable else 'false' }},
   csrfToken: {{ csrf_token()|tojson }}
 };
 </script>
