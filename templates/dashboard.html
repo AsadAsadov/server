@@ -1,83 +1,154 @@
 <!doctype html>
-<html>
+<html lang="az">
 <head>
   <meta charset="utf-8">
-  <title>BestHome Monitor - Dashboard</title>
+  <title>BestHome Monitor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 <header class="app-header">
-  <div class="brand"><div class="badge">BH</div><div><div class="brand-title">BestHome Monitor</div><div class="subtitle">RAM-only canlı işçi monitorinqi</div></div></div>
-  <div class="header-actions"><a href="{{ url_for('main.employees') }}" class="btn-secondary">👥 İşçi paneli</a><a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıxış</a></div>
+  <div class="header-inner">
+    <a class="brand" href="{{ url_for('main.dashboard') }}">
+      <span class="badge">BH</span>
+      <span>
+        <span class="brand-title">BestHome Monitor</span>
+        <span class="brand-subtitle">Kompüterlərin canlı idarəetmə paneli</span>
+      </span>
+    </a>
+    <nav class="header-actions">
+      <a href="{{ url_for('main.employees') }}" class="btn-secondary">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        İşçilər
+      </a>
+      <a href="{{ url_for('auth.logout') }}" class="logout-btn">Çıxış</a>
+    </nav>
+  </div>
 </header>
+
 <main class="dashboard-main">
-  <section class="hero-panel">
-    <div><p class="eyebrow">Monitor paneli</p><h1>Agentlər</h1><p class="subtitle">Online/offline status, son aktivlik və RAM-da saxlanan canlı görüntülər</p></div>
-    <div class="stats-box" role="group" aria-label="Agent filterləri">
+  <section class="dashboard-intro">
+    <div>
+      <p class="eyebrow">Monitor paneli</p>
+      <h1>Agentlər</h1>
+      <p class="page-description">Qoşulmuş kompüterlərin statusunu, son aktivliyini və ekran görüntüsünü bir yerdən izləyin.</p>
+    </div>
+    <div class="stats-box" role="group" aria-label="Agent filtrləri">
       <button class="stat-item active" type="button" data-filter="all"><span>Ümumi</span><b>{{ agents|length }}</b></button>
       <button class="stat-item stat-online" type="button" data-filter="online"><span>Online</span><b>{{ agents|selectattr('online')|list|length }}</b></button>
       <button class="stat-item stat-offline" type="button" data-filter="offline"><span>Offline</span><b>{{ agents|rejectattr('online')|list|length }}</b></button>
     </div>
   </section>
-  <div class="toolbar-panel"><label class="search-wrap" for="agent-search"><span>🔎</span><input id="agent-search" type="search" placeholder="İşçi, PC, şöbə və ya proses axtar..." autocomplete="off"></label></div>
-  <div class="section-title"><span id="agent-count">{{ agents|length }}</span> agent göstərilir</div>
-  <div id="emptyState" class="empty-state" hidden></div>
-  <div class="grid" id="agent-grid">
+
+  <div class="dashboard-toolbar">
+    <label class="search-wrap" for="agent-search">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="agent-search" type="search" placeholder="İşçi, kompüter, şöbə və ya proses axtar..." autocomplete="off">
+    </label>
+    <div class="result-count"><b id="agent-count">{{ agents|length }}</b> agent göstərilir</div>
+  </div>
+
+  <div id="emptyState" class="empty-state" hidden>Uyğun agent tapılmadı.</div>
+
+  <section class="agent-grid" id="agent-grid">
     {% for a in agents %}
-    <article class="card agent-card" data-status="{{ 'online' if a.online else 'offline' }}" data-search="{{ (a.name ~ ' ' ~ (a.full_name or '') ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.role or '') ~ ' ' ~ (a.active_window or '') ~ ' ' ~ (a.active_process or ''))|lower|e }}">
-      <div class="card-header">
-        <div><div class="name">{{ a.name }}</div>{% if a.full_name %}<div class="emp-line">İşçi: {{ a.full_name }}</div>{% endif %}<div class="emp-line">{% if a.department %}{{ a.department }}{% endif %}{% if a.role %}{% if a.department %} • {% endif %}{{ a.role }}{% endif %}</div></div>
-        <div class="status {{ 'online' if a.online else 'offline' }}"><span></span>{{ 'ONLINE' if a.online else 'OFFLINE' }}</div>
-      </div>
-      <div class="card-body">
-        <div class="meta-row"><span>Son aktivlik</span><b>{{ a.last_seen_display }}</b></div>
-        <div class="small info-box">Aktiv pəncərə: {{ a.active_window or '—' }}<br>Aktiv proses: {{ a.active_process or '—' }}{% if a.active_url_domain %}<br>URL: <span class="url-text">{{ a.active_url_domain }}</span>{% endif %}</div>
-        <div class="thumb-wrap {{ 'is-offline' if not a.online else '' }}">
-          {% if a.last_filename %}<img src="/screens/{{ a.last_filename }}?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}" alt="{{ a.name }} screenshot" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden')">{% endif %}
-          <div class="thumb-placeholder {{ '' if not a.last_filename else 'hidden' }}">RAM görüntü yoxdur</div>
-          {% if not a.online %}<div class="offline-watermark">OFFLINE</div>{% endif %}
+    <article class="agent-card" data-status="{{ 'online' if a.online else 'offline' }}" data-search="{{ (a.name ~ ' ' ~ (a.full_name or '') ~ ' ' ~ (a.department or '') ~ ' ' ~ (a.role or '') ~ ' ' ~ (a.active_window or '') ~ ' ' ~ (a.active_process or ''))|lower|e }}">
+      <div class="agent-card-head">
+        <div class="agent-identity">
+          <div class="agent-avatar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          </div>
+          <div style="min-width:0">
+            <div class="agent-name">{{ a.full_name or a.name }}</div>
+            <div class="agent-pc">{{ a.name }}{% if a.department %} · {{ a.department }}{% endif %}{% if a.role %} · {{ a.role }}{% endif %}</div>
+          </div>
         </div>
-        <a href="{{ url_for('main.agent_detail', agent_name=a.name) }}" class="view-link">🔍 Agent səhifəsi</a>
+        <span class="status-badge {{ 'status-online' if a.online else 'status-offline' }}"><i class="status-dot"></i>{{ 'ONLINE' if a.online else 'OFFLINE' }}</span>
+      </div>
+
+      <a class="agent-preview {{ 'is-offline' if not a.online else '' }}" href="{{ url_for('main.agent_detail', agent_name=a.name) }}">
+        {% if a.last_filename %}
+        <img src="/screens/{{ a.last_filename }}?t={{ a.last_seen.timestamp() }}" class="live-thumb" data-live-agent="{{ a.name }}" alt="{{ a.name }} ekran görüntüsü" onerror="handlePreviewError(this)">
+        {% endif %}
+        <div class="preview-placeholder {{ 'hidden' if a.last_filename else '' }}">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          <span>Ekran görüntüsü yoxdur</span>
+        </div>
+        {% if not a.online %}<span class="preview-state offline"><i class="status-dot"></i>Son saxlanmış görüntü</span>{% else %}<span class="preview-state"><i class="status-dot" style="color:var(--accent)"></i>Canlı görüntü</span>{% endif %}
+      </a>
+
+      <div class="agent-card-content">
+        <div class="agent-meta-grid">
+          <div class="meta-block"><span class="meta-label">Son aktivlik</span><span class="meta-value">{{ a.last_seen_display }}</span></div>
+          <div class="meta-block"><span class="meta-label">Aktiv proses</span><span class="meta-value">{{ a.active_process or '—' }}</span></div>
+          {% if a.active_url_domain %}<div class="meta-block"><span class="meta-label">Sayt</span><span class="meta-value">{{ a.active_url_domain }}</span></div>{% endif %}
+          <div class="meta-block"><span class="meta-label">Status</span><span class="meta-value">{{ 'Qoşulub' if a.online else 'Bağlantı yoxdur' }}</span></div>
+        </div>
+        <div class="agent-window">{{ a.active_window or 'Aktiv pəncərə məlumatı yoxdur.' }}</div>
+        <a href="{{ url_for('main.agent_detail', agent_name=a.name) }}" class="view-link">
+          Agentə bax
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
       </div>
     </article>
     {% endfor %}
-  </div>
+  </section>
 </main>
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
-  const filterButtons=Array.from(document.querySelectorAll('.stat-item[data-filter]'));
-  const cards=Array.from(document.querySelectorAll('.agent-card'));
-  const countEl=document.getElementById('agent-count');
-  const emptyEl=document.getElementById('emptyState');
-  const emptyMessages={all:'Agent yoxdur',online:'Online istifadəçi yoxdur',offline:'Offline istifadəçi yoxdur'};
-  const searchInput=document.getElementById('agent-search');
-  let currentFilter='all';
 
-  function applyFilter(filter, activeButton){
-    let visible=0;
-    cards.forEach(card=>{
-      const statusMatch=filter==='all'||card.dataset.status===filter;
-      const query=(searchInput?.value||'').trim().toLowerCase();
-      const searchMatch=!query||(card.dataset.search||'').includes(query);
-      const show=statusMatch&&searchMatch;
+<script>
+function handlePreviewError(img){
+  img.classList.add('hidden');
+  var placeholder=img.parentElement.querySelector('.preview-placeholder');
+  if(placeholder) placeholder.classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  var filterButtons=Array.prototype.slice.call(document.querySelectorAll('.stat-item[data-filter]'));
+  var cards=Array.prototype.slice.call(document.querySelectorAll('.agent-card'));
+  var countEl=document.getElementById('agent-count');
+  var emptyEl=document.getElementById('emptyState');
+  var searchInput=document.getElementById('agent-search');
+  var currentFilter='all';
+
+  function applyFilter(filter,activeButton){
+    var query=(searchInput.value||'').trim().toLowerCase();
+    var visible=0;
+    cards.forEach(function(card){
+      var statusMatch=filter==='all'||card.getAttribute('data-status')===filter;
+      var searchMatch=!query||(card.getAttribute('data-search')||'').indexOf(query)!==-1;
+      var show=statusMatch&&searchMatch;
       card.style.display=show?'':'none';
-      if(show)visible++;
+      if(show) visible+=1;
     });
-    filterButtons.forEach(btn=>btn.classList.toggle('active',btn===activeButton));
-    if(countEl)countEl.textContent=visible;
-    if(emptyEl){
-      emptyEl.textContent=(searchInput?.value||'').trim()?'Nəticə tapılmadı':(emptyMessages[filter]||emptyMessages.all);
-      emptyEl.hidden=visible!==0;
-    }
+    filterButtons.forEach(function(button){button.classList.toggle('active',button===activeButton);});
+    countEl.textContent=visible;
+    emptyEl.hidden=visible!==0;
+    emptyEl.textContent=query?'Axtarışa uyğun agent tapılmadı.':filter==='online'?'Online agent yoxdur.':filter==='offline'?'Offline agent yoxdur.':'Agent yoxdur.';
   }
 
-  filterButtons.forEach(btn=>btn.addEventListener('click',()=>{currentFilter=btn.dataset.filter||'all';applyFilter(currentFilter,btn);}));
-  searchInput?.addEventListener('input',()=>applyFilter(currentFilter,document.querySelector('.stat-item.active')));
+  filterButtons.forEach(function(button){
+    button.addEventListener('click',function(){
+      currentFilter=button.getAttribute('data-filter')||'all';
+      applyFilter(currentFilter,button);
+    });
+  });
+  searchInput.addEventListener('input',function(){
+    applyFilter(currentFilter,document.querySelector('.stat-item.active'));
+  });
 
-  const liveThumbs=Array.from(document.querySelectorAll('.live-thumb[data-live-agent]'));
-  async function refreshLiveThumb(img){if(img.closest('.agent-card')?.dataset.status!=='online')return;try{const resp=await fetch('/api/agent/'+encodeURIComponent(img.dataset.liveAgent)+'/last');if(!resp.ok)return;const data=await resp.json();if(!data.ok||!data.filename)return;img.src='/screens/'+data.filename+'?t='+Date.now();}catch(e){console.warn('Dashboard live screenshot refresh failed',e);}}
-  setInterval(()=>liveThumbs.forEach(refreshLiveThumb),1000);
+  var liveThumbs=Array.prototype.slice.call(document.querySelectorAll('.live-thumb[data-live-agent]'));
+  function refreshLiveThumb(img){
+    var card=img.closest('.agent-card');
+    if(!card||card.getAttribute('data-status')!=='online') return;
+    fetch('/api/agent/'+encodeURIComponent(img.getAttribute('data-live-agent'))+'/last')
+      .then(function(response){return response.ok?response.json():null;})
+      .then(function(data){
+        if(!data||!data.ok||!data.filename) return;
+        img.src='/screens/'+encodeURIComponent(data.filename)+'?t='+Date.now();
+      })
+      .catch(function(){});
+  }
+  window.setInterval(function(){liveThumbs.forEach(refreshLiveThumb);},1000);
 });
 </script>
 </body>
