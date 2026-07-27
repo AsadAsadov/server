@@ -2,7 +2,7 @@ import re
 import secrets
 from functools import wraps
 from pathlib import Path
-from flask import abort, redirect, request, session, url_for
+from flask import abort, request, session
 from werkzeug.utils import secure_filename
 
 _SAFE_NAME = re.compile(r'[^A-Za-z0-9_.-]+')
@@ -31,7 +31,10 @@ def generate_csrf_token() -> str:
 
 
 def validate_csrf() -> None:
-    sent = request.form.get('_csrf_token', '')
+    sent = (
+        request.headers.get('X-CSRF-Token')
+        or request.form.get('_csrf_token', '')
+    )
     expected = session.get('_csrf_token', '')
     if not expected or not secrets.compare_digest(sent, expected):
         abort(400, description='Invalid CSRF token')
@@ -49,5 +52,9 @@ def csrf_protect(f):
 def check_upload_token(expected: str) -> bool:
     if not expected:
         return False
-    provided = request.headers.get('X-Upload-Token') or request.form.get('upload_token') or request.args.get('token')
+    provided = (
+        request.headers.get('X-Upload-Token')
+        or request.form.get('upload_token')
+        or request.args.get('token')
+    )
     return bool(provided) and secrets.compare_digest(provided, expected)
