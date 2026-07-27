@@ -3,13 +3,14 @@ import platform
 import sys
 import time
 
+import agent_remote
 import cms
-from agent_remote import LOGGER as REMOTE_LOGGER
-from agent_remote import RemoteControlWorker
+from compact_remote_indicator import CompactRemoteIndicator
 
 
-REMOTE_AGENT_VERSION = "2.1.1-remote-mvp"
-MONITOR_ONLY_VERSION = "2.1.1-monitor-only"
+REMOTE_AGENT_VERSION = "2.1.2-remote-mvp"
+MONITOR_ONLY_VERSION = "2.1.2-monitor-only"
+REMOTE_LOGGER = agent_remote.LOGGER
 
 
 def _configure_remote_logging():
@@ -22,7 +23,10 @@ def _start_secure_remote_worker(config, remote_token):
     remote_config = dict(config)
     remote_config["remote_control_token"] = remote_token
 
-    worker = RemoteControlWorker(remote_config)
+    # Keep a visible but non-intrusive local safety indicator.
+    agent_remote.RemoteIndicator = CompactRemoteIndicator
+
+    worker = agent_remote.RemoteControlWorker(remote_config)
     worker.http.headers.pop("X-Upload-Token", None)
     worker.http.headers["X-Remote-Token"] = remote_token
     worker.start()
