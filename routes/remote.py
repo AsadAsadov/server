@@ -11,7 +11,7 @@ from services.remote_control import (
     RemoteSessionNotFound,
     remote_control_manager,
 )
-from utils.security import check_upload_token, csrf_protect, safe_pc_name
+from utils.security import check_remote_agent_token, csrf_protect, safe_pc_name
 
 
 remote_bp = Blueprint('remote', __name__)
@@ -29,22 +29,27 @@ def _json_error(message, status_code):
     return jsonify({'ok': False, 'error': message}), status_code
 
 
-def _agent_is_online(agent_name):
+def _agent_remote_status(agent_name):
     conn = get_db()
     try:
         row = conn.execute(
-            'SELECT last_seen FROM agents WHERE name = ?',
+            'SELECT last_seen, remote_capable FROM agents WHERE name = ?',
             (agent_name,),
         ).fetchone()
     finally:
         conn.close()
-    if not row or not row['last_seen']:
-        return False
+
+    if not row:
+        return {'exists': False, 'online': False, 'remote_capable': False}
     try:
         last_seen = datetime.fromisoformat(row['last_seen'])
     except (TypeError, ValueError):
-        return False
-    return last_seen >= datetime.utcnow() - timedelta(seconds=10)
+        last_seen = datetime.min
+    return {
+        'exists': True,
+        'online': last_seen >= datetime.utcnow() - timedelta(seconds=10),
+        'remote_capable': bool(row['remote_capable']),
+    }
 
 
 def _normalize_key(value):
@@ -124,9 +129,17 @@ def _normalize_command(command):
 @login_required
 @csrf_protect
 def start_remote_session(agent_name):
+    if not current_app.config['REMOTE_AGENT_TOKEN']:
+        return _json_error('Serverdə REMOTE_AGENT_TOKEN qurulmayıb', 503)
+
     agent_name = safe_pc_name(agent_name)
-    if not _agent_is_online(agent_name):
+    agent_status = _agent_remote_status(agent_name)
+    if not agent_status['exists']:
+        return _json_error('Agent tapılmadı', 404)
+    if not agent_status['online']:
         return _json_error('Agent offline-dır və uzaqdan idarə edilə bilməz', 409)
+    if not agent_status['remote_capable']:
+        return _json_error('Bu kompüterdə remote dəstəkli yeni agent EXE quraşdırılmayıb', 409)
 
     try:
         remote_session = remote_control_manager.create_session(
@@ -191,7 +204,7 @@ def stop_remote_session(session_id):
 
 @remote_bp.route('/api/agent/remote/poll', methods=['POST'])
 def agent_remote_poll():
-    if not check_upload_token(current_app.config['UPLOAD_TOKEN']):
+    if not check_remote_agent_token(current_app.config['REMOTE_AGENT_TOKEN']):
         return _json_error('Unauthorized', 401)
     payload = request.get_json(silent=True) or request.form
     agent_name = safe_pc_name(payload.get('pc_name', 'UNKNOWN'))
@@ -201,7 +214,7 @@ def agent_remote_poll():
 
 @remote_bp.route('/api/agent/remote/state', methods=['POST'])
 def agent_remote_state():
-    if not check_upload_token(current_app.config['UPLOAD_TOKEN']):
+    if not check_remote_agent_token(current_app.config['REMOTE_AGENT_TOKEN']):
         return _json_error('Unauthorized', 401)
     payload = request.get_json(silent=True) or request.form
     agent_name = safe_pc_name(payload.get('pc_name', 'UNKNOWN'))
