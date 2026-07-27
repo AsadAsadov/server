@@ -12,6 +12,10 @@ SCREENSHOT_METADATA: dict[str, dict[str, Any]] = {}
 _LOCK = RLock()
 
 
+def _is_last_frame(filename: str) -> bool:
+    return filename.lower().endswith('_last.jpg')
+
+
 def put_screenshot(
     filename: str,
     data: bytes,
@@ -25,6 +29,8 @@ def put_screenshot(
         SCREENSHOT_CREATED_AT[filename] = created_at or datetime.utcnow()
         if agent_name is not None:
             SCREENSHOT_AGENT[filename] = agent_name
+        else:
+            SCREENSHOT_AGENT.pop(filename, None)
         if metadata is not None:
             SCREENSHOT_METADATA[filename] = dict(metadata)
         else:
@@ -62,25 +68,31 @@ def list_agent_screenshots(agent_name: str, keep_minutes: int, limit: int, offse
             if SCREENSHOT_AGENT.get(filename) == agent_name
             and created_at >= cutoff
             and filename in SCREENSHOT_STORE
+            and not _is_last_frame(filename)
         ]
     rows.sort(key=lambda item: item[1], reverse=True)
     return rows[offset:offset + limit]
 
 
 def cleanup_ram_store(keep_minutes: int, max_per_agent: int | None = None) -> set[str]:
-    """Remove RAM-only image bytes and metadata outside retention limits."""
+    """Remove old gallery frames while preserving each agent's *_last.jpg frame."""
     cutoff = datetime.utcnow() - timedelta(minutes=keep_minutes)
     with _LOCK:
         filenames_to_remove = {
             filename
             for filename, created_at in SCREENSHOT_CREATED_AT.items()
-            if created_at < cutoff or filename not in SCREENSHOT_STORE
+            if not _is_last_frame(filename)
+            and (created_at < cutoff or filename not in SCREENSHOT_STORE)
         }
 
         if max_per_agent is not None and max_per_agent > 0:
             by_agent: dict[str, list[tuple[str, datetime]]] = {}
             for filename, created_at in SCREENSHOT_CREATED_AT.items():
-                if filename in filenames_to_remove or filename not in SCREENSHOT_STORE:
+                if (
+                    filename in filenames_to_remove
+                    or filename not in SCREENSHOT_STORE
+                    or _is_last_frame(filename)
+                ):
                     continue
                 agent_name = SCREENSHOT_AGENT.get(filename)
                 if agent_name is None:
