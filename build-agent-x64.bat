@@ -10,7 +10,7 @@ set "ICON_OPTION="
 if not errorlevel 1 goto python_ok
 
 if exist "%USERPROFILE%\Python38\python.exe" (
-  set "PYTHON_CMD=%USERPROFILE%\Python38\python.exe"
+  set PYTHON_CMD="%USERPROFILE%\Python38\python.exe"
 )
 
 %PYTHON_CMD% -c "import sys,struct; assert sys.version_info[:2]==(3,8); assert struct.calcsize('P')*8==64" >nul 2>&1
@@ -22,14 +22,14 @@ if errorlevel 1 (
 
 :python_ok
 if exist "%CD%\logo.ico" (
-  set "ICON_OPTION=--icon=%CD%\logo.ico"
+  set ICON_OPTION=--icon="%CD%\logo.ico"
   echo [OK] EXE ikonu tapildi: %CD%\logo.ico
 ) else (
   echo [INFO] logo.ico tapilmadi, standart EXE ikonu istifade olunacaq.
 )
 
 if not exist "%VENV%\Scripts\python.exe" (
-  "%PYTHON_CMD%" -m venv "%VENV%"
+  %PYTHON_CMD% -m venv "%VENV%"
   if errorlevel 1 exit /b 1
 )
 
