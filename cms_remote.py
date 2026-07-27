@@ -8,8 +8,8 @@ import cms
 from compact_remote_indicator import CompactRemoteIndicator
 
 
-REMOTE_AGENT_VERSION = "2.1.2-remote-mvp"
-MONITOR_ONLY_VERSION = "2.1.2-monitor-only"
+REMOTE_AGENT_VERSION = "2.1.3-remote-mvp"
+MONITOR_ONLY_VERSION = "2.1.3-monitor-only"
 REMOTE_LOGGER = agent_remote.LOGGER
 
 
@@ -23,7 +23,7 @@ def _start_secure_remote_worker(config, remote_token):
     remote_config = dict(config)
     remote_config["remote_control_token"] = remote_token
 
-    # Keep a visible but non-intrusive local safety indicator.
+    # Keep a small, visible and non-intrusive local safety control.
     agent_remote.RemoteIndicator = CompactRemoteIndicator
 
     worker = agent_remote.RemoteControlWorker(remote_config)
