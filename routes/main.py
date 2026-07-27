@@ -128,7 +128,7 @@ def agent_detail(agent_name):
     last_seen = datetime.fromisoformat(a['last_seen'])
     is_online = last_seen >= datetime.utcnow() - timedelta(seconds=10)
     return render_template(
-        'agent_detail.html',
+        'agent_remote.html',
         agent_name=agent_name,
         full_name=emp['full_name'] if emp and emp['full_name'] else agent_name,
         department=emp['department'] if emp else '',
