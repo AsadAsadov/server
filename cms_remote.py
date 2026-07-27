@@ -8,7 +8,8 @@ from agent_remote import LOGGER as REMOTE_LOGGER
 from agent_remote import start_remote_control_worker
 
 
-AGENT_VERSION = "2.1.0-remote-mvp"
+REMOTE_AGENT_VERSION = "2.1.0-remote-mvp"
+MONITOR_ONLY_VERSION = "2.1.0-monitor-only"
 
 
 def _configure_remote_logging():
@@ -18,11 +19,11 @@ def _configure_remote_logging():
 
 
 def main():
-    cms.AGENT_VERSION = AGENT_VERSION
+    cms.AGENT_VERSION = REMOTE_AGENT_VERSION
     log_file = cms.setup_logging()
     _configure_remote_logging()
 
-    cms._LOGGER.info("Agent başladılır. Versiya: %s", AGENT_VERSION)
+    cms._LOGGER.info("Agent başladılır. Versiya: %s", REMOTE_AGENT_VERSION)
     cms._LOGGER.info(
         "Sistem: %s | Arxitektura: %s",
         platform.platform(),
@@ -36,11 +37,17 @@ def main():
         cms._LOGGER.exception("Agent konfiqurasiyası yanlışdır: %s", exc)
         return 2
 
+    remote_enabled = bool(config.get("remote_control_enabled", False))
+    remote_token = str(config.get("remote_control_token", "")).strip()
+    if not remote_enabled or not remote_token:
+        cms.AGENT_VERSION = MONITOR_ONLY_VERSION
+
     cms._LOGGER.info("Konfiqurasiya: %s", config_path)
     cms._LOGGER.info(
-        "Server: %s | PC: %s",
+        "Server: %s | PC: %s | Remote: %s",
         config["server_url"],
         config["pc_name"],
+        "aktiv" if remote_enabled and remote_token else "deaktiv",
     )
 
     if not cms.acquire_single_instance(config["pc_name"]):
@@ -54,11 +61,18 @@ def main():
         return 3
 
     remote_worker = None
-    try:
-        remote_worker = start_remote_control_worker(config)
-    except Exception:
-        cms._LOGGER.exception(
-            "Remote control modulu başlaya bilmədi; ekran monitorinqi davam edir"
+    if remote_enabled and remote_token:
+        try:
+            remote_config = dict(config)
+            remote_config["upload_token"] = remote_token
+            remote_worker = start_remote_control_worker(remote_config)
+        except Exception:
+            cms._LOGGER.exception(
+                "Remote control modulu başlaya bilmədi; ekran monitorinqi davam edir"
+            )
+    elif remote_enabled:
+        cms._LOGGER.error(
+            "remote_control_enabled aktivdir, amma remote_control_token boşdur"
         )
 
     metadata_cache = cms.MetadataCache()
