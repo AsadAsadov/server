@@ -5,17 +5,28 @@ import time
 
 import cms
 from agent_remote import LOGGER as REMOTE_LOGGER
-from agent_remote import start_remote_control_worker
+from agent_remote import RemoteControlWorker
 
 
-REMOTE_AGENT_VERSION = "2.1.0-remote-mvp"
-MONITOR_ONLY_VERSION = "2.1.0-monitor-only"
+REMOTE_AGENT_VERSION = "2.1.1-remote-mvp"
+MONITOR_ONLY_VERSION = "2.1.1-monitor-only"
 
 
 def _configure_remote_logging():
     REMOTE_LOGGER.handlers = list(cms._LOGGER.handlers)
     REMOTE_LOGGER.setLevel(logging.INFO)
     REMOTE_LOGGER.propagate = False
+
+
+def _start_secure_remote_worker(config, remote_token):
+    remote_config = dict(config)
+    remote_config["remote_control_token"] = remote_token
+
+    worker = RemoteControlWorker(remote_config)
+    worker.http.headers.pop("X-Upload-Token", None)
+    worker.http.headers["X-Remote-Token"] = remote_token
+    worker.start()
+    return worker
 
 
 def main():
@@ -63,9 +74,7 @@ def main():
     remote_worker = None
     if remote_enabled and remote_token:
         try:
-            remote_config = dict(config)
-            remote_config["upload_token"] = remote_token
-            remote_worker = start_remote_control_worker(remote_config)
+            remote_worker = _start_secure_remote_worker(config, remote_token)
         except Exception:
             cms._LOGGER.exception(
                 "Remote control modulu başlaya bilmədi; ekran monitorinqi davam edir"
