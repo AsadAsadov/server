@@ -6,13 +6,14 @@ LOGGER = logging.getLogger("BestHomeMonitor.Remote")
 
 
 class CompactRemoteIndicator(object):
-    """Small always-visible remote-control indicator with an expandable stop panel."""
+    """Small visible remote-control badge with a minimal local stop control."""
 
-    BADGE_SIZE = 38
-    PANEL_WIDTH = 286
-    PANEL_HEIGHT = 108
-    EDGE_GAP = 18
-    BOTTOM_GAP = 78
+    BADGE_SIZE = 32
+    PANEL_WIDTH = 126
+    PANEL_HEIGHT = 42
+    EDGE_GAP = 14
+    BOTTOM_GAP = 72
+    TRANSPARENT_KEY = "#010203"
 
     def __init__(self, pc_name):
         self.pc_name = pc_name
@@ -40,12 +41,18 @@ class CompactRemoteIndicator(object):
             import tkinter as tk
 
             root = tk.Tk()
-            root.title("BestHome Monitor - Remote")
-            root.configure(bg="#7f1d1d")
+            root.title("BestHome Monitor")
+            root.configure(bg=self.TRANSPARENT_KEY)
             root.overrideredirect(True)
             root.attributes("-topmost", True)
+
             try:
-                root.attributes("-alpha", 0.94)
+                root.attributes("-transparentcolor", self.TRANSPARENT_KEY)
+            except Exception:
+                pass
+
+            try:
+                root.attributes("-alpha", 0.72)
             except Exception:
                 pass
 
@@ -59,6 +66,7 @@ class CompactRemoteIndicator(object):
                 screen_height - self.BADGE_SIZE - self.BOTTOM_GAP,
                 0,
             )
+
             root.geometry(
                 "{0}x{0}+{1}+{2}".format(
                     self.BADGE_SIZE,
@@ -71,26 +79,28 @@ class CompactRemoteIndicator(object):
                 root,
                 width=self.BADGE_SIZE,
                 height=self.BADGE_SIZE,
-                bg="#7f1d1d",
+                bg=self.TRANSPARENT_KEY,
                 highlightthickness=0,
+                borderwidth=0,
                 cursor="hand2",
             )
             canvas.pack(fill="both", expand=True)
+
             canvas.create_oval(
                 2,
                 2,
                 self.BADGE_SIZE - 2,
                 self.BADGE_SIZE - 2,
-                fill="#b91c1c",
-                outline="#fecaca",
+                fill="#e5e7eb",
+                outline="#ffffff",
                 width=1,
             )
             canvas.create_text(
                 self.BADGE_SIZE // 2,
                 self.BADGE_SIZE // 2,
                 text="BH",
-                fill="white",
-                font=("Segoe UI", 9, "bold"),
+                fill="#374151",
+                font=("Segoe UI", 8, "bold"),
             )
 
             panel_holder = {"window": None}
@@ -121,12 +131,13 @@ class CompactRemoteIndicator(object):
 
                 panel = tk.Toplevel(root)
                 panel_holder["window"] = panel
-                panel.title("BestHome Monitor - Remote")
-                panel.configure(bg="#7f1d1d")
+                panel.title("BestHome Monitor")
+                panel.configure(bg="#111827")
                 panel.overrideredirect(True)
                 panel.attributes("-topmost", True)
+
                 try:
-                    panel.attributes("-alpha", 0.97)
+                    panel.attributes("-alpha", 0.88)
                 except Exception:
                     pass
 
@@ -135,9 +146,10 @@ class CompactRemoteIndicator(object):
                     0,
                 )
                 panel_y = max(
-                    badge_y - self.PANEL_HEIGHT - 10,
+                    badge_y - self.PANEL_HEIGHT - 8,
                     0,
                 )
+
                 panel.geometry(
                     "{0}x{1}+{2}+{3}".format(
                         self.PANEL_WIDTH,
@@ -147,54 +159,19 @@ class CompactRemoteIndicator(object):
                     )
                 )
 
-                header = tk.Frame(panel, bg="#7f1d1d")
-                header.pack(fill="x", padx=12, pady=(10, 2))
-
-                tk.Label(
-                    header,
-                    text="Uzaqdan idarəetmə aktivdir",
-                    bg="#7f1d1d",
-                    fg="white",
-                    font=("Segoe UI", 10, "bold"),
-                ).pack(side="left")
-
-                tk.Button(
-                    header,
-                    text="×",
-                    command=close_panel,
-                    bg="#7f1d1d",
-                    fg="#fee2e2",
-                    activebackground="#991b1b",
-                    activeforeground="white",
-                    relief="flat",
-                    borderwidth=0,
-                    font=("Segoe UI", 12, "bold"),
-                    cursor="hand2",
-                ).pack(side="right")
-
-                tk.Label(
-                    panel,
-                    text="Bu kompüter administrator tərəfindən idarə olunur.",
-                    bg="#7f1d1d",
-                    fg="#fee2e2",
-                    font=("Segoe UI", 8),
-                ).pack(anchor="w", padx=12, pady=(0, 8))
-
                 tk.Button(
                     panel,
-                    text="İdarəetməni dayandır",
+                    text="Dayandır",
                     command=user_stop,
-                    bg="white",
-                    fg="#7f1d1d",
-                    activebackground="#fef2f2",
-                    activeforeground="#7f1d1d",
+                    bg="#f3f4f6",
+                    fg="#111827",
+                    activebackground="#e5e7eb",
+                    activeforeground="#111827",
                     relief="flat",
                     borderwidth=0,
-                    font=("Segoe UI", 8, "bold"),
-                    padx=12,
-                    pady=5,
+                    font=("Segoe UI", 9, "bold"),
                     cursor="hand2",
-                ).pack(anchor="w", padx=12)
+                ).pack(fill="both", expand=True, padx=6, pady=6)
 
             canvas.bind("<Button-1>", lambda _event: open_panel())
             canvas.bind("<Button-3>", lambda _event: open_panel())
