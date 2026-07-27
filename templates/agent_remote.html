@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8">
+  <title>{{ full_name }} - Remote Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control.css') }}">
+</head>
+<body class="remote-page">
+<header class="app-header remote-header focus-hide">
+  <div class="header-inner">
+    <a href="{{ url_for('main.dashboard') }}" class="back">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>
+      Dashboard
+    </a>
+    <a class="brand" href="{{ url_for('main.dashboard') }}">
+      <span class="badge">BH</span>
+      <span class="brand-copy">
+        <span class="brand-title">BestHome Monitor</span>
+        <span class="brand-subtitle">Agent idarəetməsi</span>
+      </span>
+    </a>
+  </div>
+</header>
+
+<main class="remote-main" id="remote-main" data-agent-online="{{ '1' if is_online else '0' }}">
+  <section class="remote-summary focus-hide">
+    <div class="remote-agent-block">
+      <div class="agent-avatar">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+      </div>
+      <div class="remote-agent-copy">
+        <p class="eyebrow">Agent məlumatları</p>
+        <h1>{{ full_name }}</h1>
+        <div class="remote-pc-name">{{ agent_name }}{% if department %} · {{ department }}{% endif %}{% if role %} · {{ role }}{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="remote-info-grid">
+      <div class="remote-info-item"><span>Son aktivlik</span><b>{{ last_seen_str }}</b></div>
+      <div class="remote-info-item"><span>Aktiv proses</span><b>{{ active_process or '—' }}</b></div>
+      <div class="remote-info-item"><span>Aktiv pəncərə</span><b title="{{ active_window or '' }}">{{ active_window or '—' }}</b></div>
+      {% if active_url %}<div class="remote-info-item"><span>Aktiv URL</span><b title="{{ active_url }}">{{ active_url }}</b></div>{% endif %}
+    </div>
+
+    <div class="remote-actions">
+      <span class="status-badge {{ 'status-online' if is_online else 'status-offline' }}"><i class="status-dot"></i>{{ 'ONLINE' if is_online else 'OFFLINE' }}</span>
+      <a href="{{ url_for('main.agent_gallery', agent_name=agent_name) }}" class="btn-gallery">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        Qalereya
+      </a>
+      <button id="remote-start" type="button" class="remote-start" {% if not is_online %}disabled{% endif %}>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="8"/></svg>
+        Uzaqdan idarə et
+      </button>
+      <button id="remote-stop" type="button" class="remote-stop hidden">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        İdarəetməni dayandır
+      </button>
+      <button id="focus-btn" type="button" class="btn-focus">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        Tam ekran
+      </button>
+    </div>
+  </section>
+
+  <section id="remote-session-panel" class="remote-session-panel focus-hide">
+    <div>
+      <span class="remote-session-label">Remote sessiya</span>
+      <b id="remote-session-title">İdarəetmə aktiv deyil</b>
+      <p id="remote-session-message">Sessiya başladıldıqda qarşı kompüterdə icazə pəncərəsi görünəcək.</p>
+    </div>
+    <span id="remote-session-badge" class="remote-session-badge idle"><i class="status-dot"></i>Gözləyir</span>
+  </section>
+
+  <section class="remote-screen-panel" id="live-box">
+    <div class="remote-screen-head focus-hide">
+      <div>
+        <div class="panel-title">Canlı ekran</div>
+        <div class="panel-subtitle">Görüntü hər 0,5 saniyədə yenilənir</div>
+      </div>
+      <div id="live-status" class="live-status-badge"><i class="status-dot"></i>Yüklənir</div>
+    </div>
+
+    <div class="remote-active-banner hidden" id="remote-active-banner">
+      <span><i class="status-dot"></i>Uzaqdan idarəetmə aktivdir</span>
+      <small>Ekrana klik edin, sonra mouse və klaviaturadan istifadə edin.</small>
+    </div>
+
+    <div class="remote-stage" id="remote-stage" tabindex="0" aria-label="Uzaqdan idarə olunan ekran">
+      <img id="live-img" class="remote-image hidden" alt="Canlı ekran görüntüsü" draggable="false">
+      <div id="live-empty" class="remote-empty">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        <b>Görüntü gözlənilir</b>
+        <span>Agent serverə qoşulduqda ekran görüntüsü burada görünəcək.</span>
+      </div>
+      <div id="remote-focus-hint" class="remote-focus-hint hidden">Klaviatura idarəsi aktivdir · çıxmaq üçün Esc</div>
+      <div id="mouse-cursor" class="mouse-cursor" hidden></div>
+    </div>
+    <div class="live-meta" id="live-meta"></div>
+  </section>
+
+  <section class="remote-help focus-hide">
+    <div class="remote-help-item"><b>Mouse</b><span>Hərəkət, sol/sağ klik, ikiqat klik və scroll dəstəklənir.</span></div>
+    <div class="remote-help-item"><b>Klaviatura</b><span>Ekrana klik etdikdən sonra yazı və əsas kombinasiyalar uzaq kompüterə göndərilir.</span></div>
+    <div class="remote-help-item"><b>Məhdudiyyət</b><span>Ctrl+Alt+Delete və Windows təhlükəsizlik ekranı ilk versiyada idarə olunmur.</span></div>
+  </section>
+
+  <section class="activity-panel focus-hide">
+    <div class="activity-head">
+      <div>
+        <div class="panel-title">Bugünkü aktivlik</div>
+        <div class="panel-subtitle">İstifadə olunan proqramlar və aktiv pəncərələr</div>
+      </div>
+      <button id="activity-toggle" type="button" class="btn-secondary" hidden>Hamısını göstər</button>
+    </div>
+    <div id="activity-list" class="activity-list"><div class="activity-empty">Aktivlik məlumatları yüklənir...</div></div>
+  </section>
+</main>
+
+<div id="modal"><span id="modal-close">✕</span><img id="modal-img" alt="Ekran görüntüsü"></div>
+
+<script>
+window.BESTHOME_REMOTE = {
+  agentName: {{ agent_name|tojson }},
+  online: {{ 'true' if is_online else 'false' }},
+  csrfToken: {{ csrf_token()|tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/remote-control.js') }}"></script>
+</body>
+</html>
