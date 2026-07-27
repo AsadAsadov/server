@@ -119,8 +119,12 @@
     pointer-events: none;
   }
 
-  body.remote-control-active.focus-mode .mobile-remote-toolbar {
+  body.remote-page.focus-mode .mobile-remote-toolbar {
     display: flex;
+  }
+
+  body.remote-page.focus-mode:not(.remote-control-active) #mobile-keyboard-button {
+    display: none;
   }
 
   .mobile-remote-button {
