@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <title>{{ full_name }} - Remote Control</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control-mobile.css') }}">
 </head>
 <body class="remote-page">
 <header class="app-header remote-header focus-hide">
@@ -121,6 +122,12 @@
   </section>
 </main>
 
+<div id="mobile-remote-toolbar" class="mobile-remote-toolbar" aria-label="Mobil idarəetmə alətləri">
+  <button id="mobile-keyboard-button" type="button" class="mobile-remote-button" aria-label="Klaviaturanı aç">⌨</button>
+  <button id="mobile-exit-button" type="button" class="mobile-remote-button exit" aria-label="Tam ekrandan çıx">✕</button>
+</div>
+<textarea id="mobile-keyboard-input" class="mobile-keyboard-input" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" aria-label="Uzaq kompüter üçün klaviatura"></textarea>
+
 <div id="modal"><span id="modal-close">✕</span><img id="modal-img" alt="Ekran görüntüsü"></div>
 
 <script>
@@ -133,5 +140,6 @@ window.BESTHOME_REMOTE = {
 </script>
 <script src="{{ url_for('static', filename='js/remote-control.js') }}"></script>
 <script src="{{ url_for('static', filename='js/remote-control-guard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/remote-control-mobile.js') }}"></script>
 </body>
 </html>
