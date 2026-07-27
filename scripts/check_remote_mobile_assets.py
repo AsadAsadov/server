@@ -20,6 +20,7 @@ def main():
             "mobile-exit-button",
             "mobile-keyboard-input",
             "remote-control-mobile.js",
+            "20260727-3",
         ],
     )
     require(
@@ -44,9 +45,22 @@ def main():
             "MouseEvent",
             "autoFocusedForSession",
             "TRACKPAD_SPEED",
+            "TRACKPAD_DEAD_ZONE",
+            "TRACKPAD_MAX_STEP",
+            "TRACKPAD_SMOOTHING",
+            "stabilizeDelta",
             "virtualCursor",
             "moveVirtualCursor",
             "keepKeyboardOpen",
+        ],
+    )
+    require(
+        "build-agent-x64.bat",
+        [
+            "logo.ico",
+            "--icon=",
+            "%USERPROFILE%\\Python38\\python.exe",
+            "--retries 20",
         ],
     )
     print("REMOTE MOBILE ASSETS: OK")
