@@ -7,7 +7,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control-mobile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/remote-control-mobile.css', v='20260727-2') }}">
 </head>
 <body class="remote-page">
 <header class="app-header remote-header focus-hide">
@@ -140,6 +140,6 @@ window.BESTHOME_REMOTE = {
 </script>
 <script src="{{ url_for('static', filename='js/remote-control.js') }}"></script>
 <script src="{{ url_for('static', filename='js/remote-control-guard.js') }}"></script>
-<script src="{{ url_for('static', filename='js/remote-control-mobile.js') }}"></script>
+<script src="{{ url_for('static', filename='js/remote-control-mobile.js', v='20260727-2') }}"></script>
 </body>
 </html>
