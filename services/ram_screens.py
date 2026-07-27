@@ -44,7 +44,7 @@ def get_screenshot(filename: str) -> bytes | None:
 
 
 def get_latest_image(agent_name: str) -> tuple[bytes, str, datetime, dict[str, Any] | None] | None:
-    """Return latest RAM image bytes, filename, timestamp, and optional metadata for an agent."""
+    """Return latest RAM frame for an agent, falling back to its persistent *_last.jpg frame."""
     with _LOCK:
         latest: tuple[str, datetime] | None = None
         for filename, created_at in SCREENSHOT_CREATED_AT.items():
@@ -52,6 +52,13 @@ def get_latest_image(agent_name: str) -> tuple[bytes, str, datetime, dict[str, A
                 continue
             if latest is None or created_at > latest[1]:
                 latest = (filename, created_at)
+
+        last_filename = f'{agent_name}_last.jpg'
+        last_created_at = SCREENSHOT_CREATED_AT.get(last_filename)
+        if last_filename in SCREENSHOT_STORE and last_created_at is not None:
+            if latest is None or last_created_at > latest[1]:
+                latest = (last_filename, last_created_at)
+
         if latest is None:
             return None
         filename, created_at = latest
